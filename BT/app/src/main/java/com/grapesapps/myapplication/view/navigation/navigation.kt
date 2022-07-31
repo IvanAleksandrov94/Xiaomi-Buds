@@ -10,8 +10,8 @@ import androidx.navigation.*
 import androidx.navigation.NavDestination.Companion.hierarchy
 import com.google.accompanist.navigation.animation.AnimatedNavHost
 import com.google.accompanist.navigation.animation.composable
+import com.grapesapps.myapplication.HeadsetScreen
 
-import com.grapesapps.myapplication.HomeScreen
 import com.grapesapps.myapplication.vm.Home
 
 
@@ -67,7 +67,7 @@ fun Navigation(
             BackHandler(true) {}
 
             val dailyViewModel = hiltViewModel<Home>()
-            HomeScreen(navController = navController, viewModel = dailyViewModel)
+            HeadsetScreen(navController = navController, viewModel = dailyViewModel)
 
         }
 
