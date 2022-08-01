@@ -4,12 +4,11 @@ package com.grapesapps.myapplication
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothManager
+import android.bluetooth.*
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -44,6 +43,61 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalUnsignedTypes::class, ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val btClassicReceiver = object : BroadcastReceiver() {
+            @SuppressLint("MissingPermission")
+            override fun onReceive(context: Context, intent: Intent) {
+
+                if (BluetoothHeadset.ACTION_AUDIO_STATE_CHANGED == intent.action) {
+                    Log.e("BroadcastReceiver", "${intent.action}")
+                }
+                if (BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED == intent.action) {
+                    Log.e("BroadcastReceiver", "${intent.action}")
+                }
+                if (BluetoothHeadset.ACTION_VENDOR_SPECIFIC_HEADSET_EVENT == intent.action) {
+                    Log.e("BroadcastReceiver", "${intent.action}")
+                }
+
+                when (intent.action) {
+                    BluetoothAdapter.ACTION_DISCOVERY_STARTED -> {
+                        Log.d("BroadcastReceiver", "Device discovery started")
+                    }
+                    BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
+                        Log.d("BroadcastReceiver", "Device discovery finished")
+                        //  MainActivity1.myDevice?.fetchUuidsWithSdp()
+
+                    }
+                    BluetoothDevice.ACTION_UUID -> {
+                        val uuidExtra = intent.getParcelableArrayExtra(BluetoothDevice.EXTRA_UUID)
+                        Log.d("BroadcastReceiver", "${uuidExtra?.toSet()}")
+                    }
+
+                    BluetoothDevice.ACTION_FOUND -> {
+                        Log.d("BroadcastReceiver", "ACTION_FOUND")
+                        val device: BluetoothDevice? =
+                            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+                        Log.d("BroadcastReceiver", "${device?.name}")
+                        Log.d("BroadcastReceiver", "${device?.address}")
+                        if (device?.name == "Xiaomi Buds 3T Pro") {
+                            //  MainActivity1.myDevice = device
+                        }
+                    }
+                }
+            }
+        }
+        val intentFilter = IntentFilter().apply {
+//            addAction(BluetoothDevice.ACTION_FOUND)
+//            addAction(BluetoothDevice.ACTION_UUID)
+//            addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED)
+//            addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
+            addAction(BluetoothHeadset.ACTION_VENDOR_SPECIFIC_HEADSET_EVENT)
+            addAction(BluetoothHeadset.VENDOR_SPECIFIC_HEADSET_EVENT_COMPANY_ID_CATEGORY+"."+ BluetoothAssignedNumbers.PLANTRONICS)
+            addAction(BluetoothHeadset.ACTION_AUDIO_STATE_CHANGED);
+            addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED);
+        }
+
+        registerReceiver(btClassicReceiver, intentFilter)
+
         setContent {
             pref = SharedPrefManager(LocalContext.current)
             navController = rememberAnimatedNavController()

@@ -2,6 +2,7 @@ package com.grapesapps.myapplication
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothHeadset
 import android.bluetooth.BluetoothSocket
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +20,46 @@ class BluetoothService @Inject constructor() {
         private const val TAG = "BT_CONNECT"
 
         private fun byteArrayOfInts(ints: List<Int>) = ByteArray(ints.size) { pos -> ints[pos].toByte() }
+
+
+        // headset info and version
+        private val service0 = listOf(
+            0xfe, 0xdc, 0xba, 0x01, 0xf4, 0x00, 0x0d, 0x00,
+            0x05, 0x0a, 0x00, 0x22, 0x00, 0x00, 0x98, 0x42,
+            0x0a, 0x00, 0x00, 0x00, 0xef
+        )
+
+        // headset info and version
+        private val service1 = listOf(
+            0xfe, 0xdc, 0xba, 0xc1, 0x02, 0x00, 0x05, 0x05, 0xff, 0xff, 0xff,
+            0xff, 0xef, 0xfe, 0xdc, 0xba, 0xc1, 0x09, 0x00, 0x05, 0x06, 0xff,
+            0xff, 0xff, 0xff, 0xef
+        )
+
+        // headset info and version
+        private val service2 = listOf(
+            0xfe, 0xdc, 0xba, 0xc1, 0xf3, 0x00, 0x11, 0x07, 0x00, 0x01, 0x00,
+            0x02, 0x00, 0x03, 0x00, 0x04, 0x00, 0x0a, 0x00, 0x0b, 0x00, 0x0f,
+            0x00, 0x24, 0xef
+        )
+
+        // spectral
+        private val spectral = listOf(
+             0xef, 0x3f, 0x0d, 0x0a, 0x2b, 0x58, 0x49, 0x41, 0x4f, 0x4d, 0x49, 0x3a, 0x20, 0x46, 0x46,
+            0x30, 0x31, 0x30, 0x32, 0x30, 0x31, 0x30, 0x33, 0x30, 0x32, 0x30, 0x35, 0x30, 0x31, 0x46, 0x46,
+            0x0d, 0x0a, 0x55
+
+        )
+
+//        const val command0 = "\r\nOK\r\n"
+//        const val command1 = "\r\n+CIEV: 4,3\r\n"
+        const val command2 = "\r\n+XIAOMI: FF01020103020501FF\r\n"
+
+
+//        const val command0 = "AT+BRSF=20\r"
+//        const val command1 = "OK"
+//        const val command2 = "+XIAOMI: FF01020103020501FF"
+
 
         // headset info and version
         private val headsetInfo = listOf(
@@ -61,6 +102,19 @@ class BluetoothService @Inject constructor() {
     suspend fun activateNoiseMode() = sendData(byteArrayOfInts(noise))
     suspend fun activateTransparencyMode() = sendData(byteArrayOfInts(transparency))
 
+//    suspend fun sendServiceMessage() {
+//        sendData(byteArrayOfInts(service0))
+//        sendData(byteArrayOfInts(service1))
+//        sendData(byteArrayOfInts(service2))
+//    }
+
+    suspend fun activateSpectralAudio() {
+        sendData(command2.map { it.toByte() }.toByteArray())
+        // sendData(command1.toByteArray())
+        //  sendData(command2.toByteArray())
+    }
+ //   suspend fun activateSpectralAudio() = sendData(byteArrayOfInts(spectral))
+
     suspend fun getHeadsetInfo() = sendData(byteArrayOfInts(headsetInfo))
     suspend fun checkHeadsetMode() = sendData(byteArrayOfInts(checkHeadsetMode))
 
@@ -75,7 +129,7 @@ class BluetoothService @Inject constructor() {
         withContext(Dispatchers.IO) {
             btDevice = device
             btUUID = uuid
-            btSocket = device.createInsecureRfcommSocketToServiceRecord(uuid)
+            btSocket = device.createRfcommSocketToServiceRecord(uuid)
             outputStream = btSocket.outputStream
             inputStream = btSocket.inputStream
             try {
@@ -111,10 +165,10 @@ class BluetoothService @Inject constructor() {
     }
 
 
-
-
     suspend fun sendData(data: ByteArray) = withContext(Dispatchers.IO) {
         try {
+//            val parsed = data.joinToString(" ") { "%02x".format(it) }
+//            Log.i("VM Bluetooth", parsed)
             outputStream.write(data)
         } catch (e: IOException) {
             if (e.message == "Broken pipe") {

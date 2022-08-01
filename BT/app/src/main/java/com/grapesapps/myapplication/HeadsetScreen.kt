@@ -1,8 +1,12 @@
 package com.grapesapps.myapplication
 
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothManager
+import android.bluetooth.*
+import android.bluetooth.BluetoothHeadset.VENDOR_RESULT_CODE_COMMAND_ANDROID
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -39,17 +43,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
-import com.grapesapps.myapplication.entity.*
+import com.grapesapps.myapplication.entity.CHeadsetBatteryStatus
+import com.grapesapps.myapplication.entity.HeadsetMainSetting
+import com.grapesapps.myapplication.entity.LHeadsetBatteryStatus
+import com.grapesapps.myapplication.entity.RHeadsetBatteryStatus
 import com.grapesapps.myapplication.ui.theme.BudsApplicationTheme
 import com.grapesapps.myapplication.vm.Home
 import com.grapesapps.myapplication.vm.HomeState
 import kotlinx.coroutines.launch
+import java.lang.reflect.Method
 
-//val info1 = [-2, -36, -70, 1, 2, 0, 59, 0, 2, 19, 0, 88, 105, 97, 111, 109, 105, 32, 66, 117, 100, 115, 32, 51, 84, 32, 80, 114, 111, 3, 1, 82, 64, 2, 2, 100, 5, 3, 39, 23, 80, 45, 2, 4, 1, 2, 5, 0, 3, 6, 18, 52, 4, 7, 100, 100, -1, 2, 10, 1, 2, 11, 0, 2, 13, 2, -17]
-//val heds1 = [-2, -36, -70, -57, 14, 0, 4, 8, 2, 4, 0, -17, -2, -36, -70, -57, -12, 0, 6, 9, 4, 0, 11, 0, 0, -17, -2, -36, -70, 1, 8, 0, 2, 9, 7, -17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-//val heds2 = [-2, -36, -70, -57, 14, 0, 4, 8, 2, 4, 0, -17, -2, -36, -70, -57, -12, 0, 6, 9, 4, 0, 11, 0, 0, -17, -2, -36, -70, 1, 8, 0, 2, 9, 7, -17]
-//val heds3 = [-2, -36, -70, -57, 14, 0, 4, 8, 2, 4, 0, -17, -2, -36, -70, -57, -12, 0, 6, 9, 4, 0, 11, 0, 0, -17, -2, -36, -70, 1, 8, 0, 2, 9, 7, -17]
-//val heds4 = [-2, -36, -70, -57, 14, 0, 4, 8, 2, 4, 0, -17, -2, -36, -70, -57, -12, 0, 6, 9, 4, 0, 11, 0, 0, -17, -2, -36, -70, 1, 8, 0, 2, 1, 7, -17]
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @SuppressLint(
@@ -69,7 +72,7 @@ fun HeadsetScreen(
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberSplineBasedDecay(), rememberTopAppBarState())
 
-    var switchChecked by remember { mutableStateOf(true) }
+    var switchChecked by remember { mutableStateOf(false) }
 
     val lifecycleStateObserver = LocalLifecycleOwner.current.lifecycle.observeAsState()
     val lifecycleState = lifecycleStateObserver.value
@@ -78,9 +81,42 @@ fun HeadsetScreen(
     val bluetoothAdapter: BluetoothAdapter? = remember { bluetoothManager.adapter }
 
     val btDevice = bluetoothAdapter?.bondedDevices?.firstOrNull { it.name == "Xiaomi Buds 3T Pro" }
+    lateinit var btHeadset: BluetoothHeadset
+
+
+
+
+
+
+    bluetoothManager.adapter?.getProfileProxy(
+        context, object : BluetoothProfile.ServiceListener {
+            override fun onServiceConnected(profile: Int, proxy: BluetoothProfile?) {
+                if (profile == BluetoothProfile.HEADSET) {
+                    val mCurrentHeadset = proxy as BluetoothHeadset
+                    btHeadset = mCurrentHeadset
+                    Log.i("MAIN", "BluetoothHeadset ПОДКЛЮЧЕН")
+//                      btHeadset.sendVendorSpecificResultCode(btDevice, "+XIAOMI", "FF01020103020501FF")
+//                      btHeadset.sendVendorSpecificResultCode(btDevice, "+XIAOMI", "FF01020103020500FF")
+                }
+            }
+
+            override fun onServiceDisconnected(profile: Int) {
+                if (profile == BluetoothProfile.HEADSET) {
+                    //btHeadset = null
+                    Log.i("MAIN", "BluetoothHeadset ОТКЛЮЧЕН")
+                }
+            }
+
+
+        }, BluetoothProfile.HEADSET
+    )
+
+
 
     LaunchedEffect(key1 = viewModel, block = {
+
         launch {
+
             if (btDevice != null) {
                 viewModel.connectDevice(btDevice)
             } else {
@@ -88,6 +124,10 @@ fun HeadsetScreen(
             }
         }
     })
+
+
+
+
 
 
     LaunchedEffect(key1 = lifecycleState) {
@@ -185,7 +225,7 @@ fun HeadsetScreen(
 
                                         HeadsetMainSetting.Transparency -> {
                                             Column() {
-                                                switchChecked = state.headsetStatus.value == 1
+                                                //  switchChecked = state.headsetStatus.value == 1
                                                 Row(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
@@ -201,11 +241,11 @@ fun HeadsetScreen(
                                                     Text("Услиление голоса", fontSize = 14.sp)
                                                     Switch(
                                                         modifier = Modifier.scale(0.8f),
-                                                        checked = switchChecked,
+                                                        checked = false,
                                                         colors = SwitchDefaults.colors(),
                                                         onCheckedChange = {
                                                             //  viewModel.changeMainSetting(it, state)
-                                                            switchChecked = it
+                                                            // switchChecked = it
                                                         }
 
                                                     )
@@ -239,7 +279,26 @@ fun HeadsetScreen(
                                             colors = SwitchDefaults.colors(
 
                                             ),
-                                            onCheckedChange = { switchChecked = it }
+                                            onCheckedChange = {
+                                                if (it) {
+                                                    btHeadset.sendVendorSpecificResultCode(
+                                                        btDevice,
+                                                        "+XIAOMI",
+                                                        "FF01020103020501FF"
+                                                    )
+//
+                                                } else {
+                                                    btHeadset.sendVendorSpecificResultCode(
+                                                        btDevice,
+                                                        "+XIAOMI",
+                                                        "FF01020103020500FF"
+                                                    )
+                                                }
+                                                switchChecked = it
+
+                                                //  viewModel.onSelectSpectralAudio()
+                                                // switchChecked = it
+                                            }
 
                                         )
                                     }
@@ -264,11 +323,13 @@ fun HeadsetScreen(
                                         Text("Обнаружение уха", fontSize = 14.sp)
                                         Switch(
                                             modifier = Modifier.scale(0.8f),
-                                            checked = switchChecked,
+                                            checked = false,
                                             colors = SwitchDefaults.colors(
 
                                             ),
-                                            onCheckedChange = { switchChecked = it }
+                                            onCheckedChange = {
+                                                //  switchChecked = it
+                                            }
 
                                         )
                                     }
@@ -282,11 +343,13 @@ fun HeadsetScreen(
                                         Text("Автоматический ответ", fontSize = 14.sp)
                                         Switch(
                                             modifier = Modifier.scale(0.8f),
-                                            checked = switchChecked,
+                                            checked = false,
                                             colors = SwitchDefaults.colors(
 
                                             ),
-                                            onCheckedChange = { switchChecked = it }
+                                            onCheckedChange = {
+                                                //   switchChecked = it
+                                            }
 
                                         )
                                     }
@@ -300,11 +363,13 @@ fun HeadsetScreen(
                                         Text("Виджет в шторке уведомлений", fontSize = 14.sp)
                                         Switch(
                                             modifier = Modifier.scale(0.8f),
-                                            checked = switchChecked,
+                                            checked = false,
                                             colors = SwitchDefaults.colors(
 
                                             ),
-                                            onCheckedChange = { switchChecked = it }
+                                            onCheckedChange = {
+                                                //  switchChecked = it
+                                            }
 
                                         )
                                     }
@@ -329,11 +394,13 @@ fun HeadsetScreen(
                                         Text("Абсолютная громкость", fontSize = 14.sp)
                                         Switch(
                                             modifier = Modifier.scale(0.8f),
-                                            checked = switchChecked,
+                                            checked = false,
                                             colors = SwitchDefaults.colors(
 
                                             ),
-                                            onCheckedChange = { switchChecked = it }
+                                            onCheckedChange = {
+                                                //   switchChecked = it
+                                            }
 
                                         )
                                     }
@@ -347,11 +414,13 @@ fun HeadsetScreen(
                                         Text("LHDC", fontSize = 14.sp)
                                         Switch(
                                             modifier = Modifier.scale(0.8f),
-                                            checked = switchChecked,
+                                            checked = false,
                                             colors = SwitchDefaults.colors(
 
                                             ),
-                                            onCheckedChange = { switchChecked = it }
+                                            onCheckedChange = {
+                                                //   switchChecked = it
+                                            }
 
                                         )
                                     }
@@ -365,11 +434,13 @@ fun HeadsetScreen(
                                         Text("Режим низкой задержки", fontSize = 14.sp)
                                         Switch(
                                             modifier = Modifier.scale(0.8f),
-                                            checked = switchChecked,
+                                            checked = false,
                                             colors = SwitchDefaults.colors(
 
                                             ),
-                                            onCheckedChange = { switchChecked = it }
+                                            onCheckedChange = {
+                                                //switchChecked = it
+                                            }
 
                                         )
                                     }
@@ -407,6 +478,16 @@ fun HeadsetScreen(
                                     }
 
                                 }
+                            }
+                        }
+                        if (state.fwInfo != null) {
+                            item {
+                                Text(
+                                    "Версия прошивки ${state.fwInfo.version}",
+                                    modifier = Modifier.padding(start = 15.dp, end = 15.dp, top = 10.dp, bottom = 5.dp),
+                                    fontSize = 12.sp,
+                                    textAlign = TextAlign.Center
+                                )
                             }
                         }
                         item {
@@ -680,8 +761,6 @@ fun NoiseControl(
                         }
 
                     }
-
-
                     Box(
                         modifier = Modifier
                             .clickable(
@@ -758,3 +837,6 @@ fun HeadsetScreenPreview() {
     val viewModel = hiltViewModel<Home>()
     HeadsetScreen(null, viewModel = viewModel)
 }
+
+
+
