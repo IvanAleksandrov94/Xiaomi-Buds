@@ -14,7 +14,10 @@ import com.grapesapps.myapplication.model.DaggerRepositoryComponent
 import com.grapesapps.myapplication.model.SharedPrefManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.io.InputStream
 import java.util.*
@@ -96,16 +99,7 @@ class Home @Inject constructor(
                 btService.getHeadsetInfo()
                 listenData()
             }
-//            viewState.postValue(
-//                HomeState.HomeStateLoaded(
-//                    true,
-//                    1,
-//                    null,
-//                    null,
-//                    null,
-//                    null,
-//                ),
-//            )
+
         }
     }
 
@@ -144,12 +138,12 @@ class Home @Inject constructor(
             while (true) {
                 val bytes = inputStream.available()
                 if (bytes != 0) {
+                    errorViewState.postValue(null)
                     val tempBuffer = ByteArray(bytes)
                     inputStream.read(tempBuffer, 0, bytes)
                     Log.i("VM Bluetooth", "${tempBuffer.map { it }}")
-                    val parsed = tempBuffer.joinToString(" ") { "%02x".format(it) }
-                    Log.i("VM Bluetooth", parsed)
-
+//                    val parsed = tempBuffer.joinToString(" ") { "%02x".format(it) }
+//                    Log.i("VM Bluetooth", parsed)
 
                     // Status Headset
                     // byteArr[6] is 0x04 --> headset mode
@@ -163,7 +157,11 @@ class Home @Inject constructor(
                             // byteArr[10] is 0x03 --> battery charging status
                             when (val headsetMode = tempBuffer[10]) {
                                 0x00.toByte() -> {
-                                    Log.i("VM Bluetooth", "${headsetMode.toInt()} ОТКЛЮЧЕНО")
+                                    if(tempBuffer.size < 24){
+                                        btService.checkHeadsetMode()
+                                        break
+                                    }
+                                    Log.i("VM Bluetooth", "${headsetMode.toInt()} ОТКЛЮЧЕНО SIZE:${tempBuffer.size}")
                                     if (state.value is HomeState.HomeStateLoaded) {
                                         val headsetStatus =
                                             HeadsetSettingStatus(HeadsetMainSetting.Off, tempBuffer[24].toInt())
@@ -180,9 +178,12 @@ class Home @Inject constructor(
                                     }
                                 }
                                 0x01.toByte() -> {
-                                    Log.i("VM Bluetooth", "${headsetMode.toInt()} Включен режим: ШУМОДАВ")
+                                    if(tempBuffer.size < 24){
+                                        btService.checkHeadsetMode()
+                                        break
+                                    }
+                                    Log.i("VM Bluetooth", "${headsetMode.toInt()} Включен режим: ШУМОДАВ SIZE:${tempBuffer.size}")
                                     if (state.value is HomeState.HomeStateLoaded) {
-
                                         val noiseValue = when (tempBuffer[24]) {
                                             0x03.toByte() -> 0
                                             0x01.toByte() -> 1
@@ -205,7 +206,11 @@ class Home @Inject constructor(
                                     }
                                 }
                                 0x02.toByte() -> {
-                                    Log.i("VM Bluetooth", "${headsetMode.toInt()} Включен режим: ПРОЗРАЧНОСТЬ")
+                                    if(tempBuffer.size < 24){
+                                        btService.checkHeadsetMode()
+                                        break
+                                    }
+                                    Log.i("VM Bluetooth", "${headsetMode.toInt()} Включен режим: ПРОЗРАЧНОСТЬ SIZE:${tempBuffer.size}")
                                     if (state.value is HomeState.HomeStateLoaded) {
                                         val headsetStatus =
                                             HeadsetSettingStatus(
@@ -293,10 +298,7 @@ class Home @Inject constructor(
                                     )
                                 )
                             }
-
-
                             btService.checkHeadsetMode()
-
                             Log.i(
                                 "VM Bluetooth", "Заряд INFO: " +
                                         "L: ${if (bLInfoPercent.isCharging) "🔋" else ""}${bLInfoPercent.battery} " +
@@ -310,10 +312,12 @@ class Home @Inject constructor(
             }
         } catch (e: IOException) {
             Log.e("VM Bluetooth", "IOException: ${e.message}")
+        } catch (e: IndexOutOfBoundsException) {
+            Log.e("VM Bluetooth", "IndexOutOfBoundsException: ${e.message}")
+            btService.checkHeadsetMode()
         } catch (e: Throwable) {
             Log.e("VM Bluetooth", "${e.message}")
         }
-
 
     }
 

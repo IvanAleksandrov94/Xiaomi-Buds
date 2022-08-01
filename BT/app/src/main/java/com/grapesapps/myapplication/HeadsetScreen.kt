@@ -2,7 +2,6 @@ package com.grapesapps.myapplication
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.widget.Toast
 import androidx.compose.animation.rememberSplineBasedDecay
@@ -39,16 +38,18 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.grapesapps.myapplication.entity.*
 import com.grapesapps.myapplication.ui.theme.BudsApplicationTheme
 import com.grapesapps.myapplication.vm.Home
 import com.grapesapps.myapplication.vm.HomeState
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.*
 
+//val info1 = [-2, -36, -70, 1, 2, 0, 59, 0, 2, 19, 0, 88, 105, 97, 111, 109, 105, 32, 66, 117, 100, 115, 32, 51, 84, 32, 80, 114, 111, 3, 1, 82, 64, 2, 2, 100, 5, 3, 39, 23, 80, 45, 2, 4, 1, 2, 5, 0, 3, 6, 18, 52, 4, 7, 100, 100, -1, 2, 10, 1, 2, 11, 0, 2, 13, 2, -17]
+//val heds1 = [-2, -36, -70, -57, 14, 0, 4, 8, 2, 4, 0, -17, -2, -36, -70, -57, -12, 0, 6, 9, 4, 0, 11, 0, 0, -17, -2, -36, -70, 1, 8, 0, 2, 9, 7, -17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+//val heds2 = [-2, -36, -70, -57, 14, 0, 4, 8, 2, 4, 0, -17, -2, -36, -70, -57, -12, 0, 6, 9, 4, 0, 11, 0, 0, -17, -2, -36, -70, 1, 8, 0, 2, 9, 7, -17]
+//val heds3 = [-2, -36, -70, -57, 14, 0, 4, 8, 2, 4, 0, -17, -2, -36, -70, -57, -12, 0, 6, 9, 4, 0, 11, 0, 0, -17, -2, -36, -70, 1, 8, 0, 2, 9, 7, -17]
+//val heds4 = [-2, -36, -70, -57, 14, 0, 4, 8, 2, 4, 0, -17, -2, -36, -70, -57, -12, 0, 6, 9, 4, 0, 11, 0, 0, -17, -2, -36, -70, 1, 8, 0, 2, 1, 7, -17]
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @SuppressLint(
@@ -66,7 +67,7 @@ fun HeadsetScreen(
     val errorState: State<String?> = viewModel.errorState.observeAsState()
     val scrollState = rememberLazyListState()
     val scrollBehavior =
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberSplineBasedDecay(), rememberTopAppBarScrollState())
+        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberSplineBasedDecay(), rememberTopAppBarState())
 
     var switchChecked by remember { mutableStateOf(true) }
 
@@ -203,7 +204,7 @@ fun HeadsetScreen(
                                                         checked = switchChecked,
                                                         colors = SwitchDefaults.colors(),
                                                         onCheckedChange = {
-                                                          //  viewModel.changeMainSetting(it, state)
+                                                            //  viewModel.changeMainSetting(it, state)
                                                             switchChecked = it
                                                         }
 
@@ -411,9 +412,14 @@ fun HeadsetScreen(
                         item {
                             TextButton(
                                 modifier = Modifier.padding(start = 5.dp, end = 15.dp, top = 30.dp, bottom = 40.dp),
-                              //  color = Color.Red,
-                                onClick = {}){
-                                Text("Удалить устройство", fontSize = 16.sp, color = Color.Red, textAlign = TextAlign.Center)
+                                //  color = Color.Red,
+                                onClick = {}) {
+                                Text(
+                                    "Удалить устройство",
+                                    fontSize = 16.sp,
+                                    color = Color.Red,
+                                    textAlign = TextAlign.Center
+                                )
                             }
                         }
                     }
@@ -513,7 +519,7 @@ fun HeadsetControl(
     onCheckedChange: (Int) -> Unit,
 ) {
     val statesHeadsetControl = listOf("Шумоподавление", "Отключено", "Прозрачность")
-    val value = if (mainHeadsetValue == -1) 1 else mainHeadsetValue
+    val value = if (mainHeadsetValue == -1 || mainHeadsetValue > 2) 1 else mainHeadsetValue
     Box(
         modifier = Modifier
             .clip(shape = RoundedCornerShape(15.dp))
