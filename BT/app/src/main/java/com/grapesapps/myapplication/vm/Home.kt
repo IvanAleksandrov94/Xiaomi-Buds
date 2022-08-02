@@ -4,12 +4,14 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothHeadset
 import android.content.Context
+import android.media.MediaPlayer
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.grapesapps.myapplication.BluetoothService
+import com.grapesapps.myapplication.R
 import com.grapesapps.myapplication.entity.*
 import com.grapesapps.myapplication.model.DaggerRepositoryComponent
 import com.grapesapps.myapplication.model.SharedPrefManager
@@ -55,7 +57,7 @@ class Home @Inject constructor(
     val errorState: LiveData<String?> = errorViewState
     private val sharedPrefManager: SharedPrefManager
     private val uuid: UUID = UUID.fromString("0000fd2d-0000-1000-8000-00805f9b34fb")
-    lateinit var btHeadset: BluetoothHeadset
+
 
     // in Service
     private val percentList = listOf(
@@ -116,6 +118,37 @@ class Home @Inject constructor(
         }
     }
 
+    fun onSelectAutoSearchEar() {
+        val isConnected = btService.isConnected()
+        viewModelScope.launch(Dispatchers.IO) {
+            if(isConnected){
+                btService.activateAutoSearchEarOn()
+            }
+
+        }
+    }
+
+    fun onSelectAutoPhoneAnswer() {
+        val isConnected = btService.isConnected()
+        viewModelScope.launch(Dispatchers.IO) {
+            if(isConnected){
+                btService.activateAutoPhoneAnswerOn()
+            }
+
+        }
+    }
+
+    fun onStartHeadTest() {
+        val isConnected = btService.isConnected()
+        viewModelScope.launch(Dispatchers.IO) {
+            if(isConnected){
+
+                btService.activateHeadTest()
+            }
+
+        }
+    }
+
     fun changeMainSetting(mainHeadsetValue: Int, state: HomeState.HomeStateLoaded) {
         val isConnected = btService.isConnected()
         viewModelScope.launch(Dispatchers.IO) {
@@ -148,6 +181,7 @@ class Home @Inject constructor(
 
     private suspend fun listenData() = withContext(Dispatchers.IO) {
         try {
+
             while (true) {
                 val bytes = inputStream.available()
                 if (bytes != 0) {

@@ -18,7 +18,6 @@ import androidx.annotation.RequiresApi
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -34,6 +33,7 @@ import kotlinx.coroutines.*
 import java.nio.ByteBuffer
 import java.util.*
 
+
 @AndroidEntryPoint
 @OptIn(ExperimentalAnimationApi::class)
 class MainActivity : ComponentActivity() {
@@ -44,58 +44,97 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val btClassicReceiver = object : BroadcastReceiver() {
-            @SuppressLint("MissingPermission")
-            override fun onReceive(context: Context, intent: Intent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.BLUETOOTH_ADMIN,
+                    Manifest.permission.BLUETOOTH,
+                    Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.FOREGROUND_SERVICE,
+                    Manifest.permission.RECEIVE_BOOT_COMPLETED,
+                    Manifest.permission.WAKE_LOCK,
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
 
-                if (BluetoothHeadset.ACTION_AUDIO_STATE_CHANGED == intent.action) {
-                    Log.e("BroadcastReceiver", "${intent.action}")
-                }
-                if (BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED == intent.action) {
-                    Log.e("BroadcastReceiver", "${intent.action}")
-                }
-                if (BluetoothHeadset.ACTION_VENDOR_SPECIFIC_HEADSET_EVENT == intent.action) {
-                    Log.e("BroadcastReceiver", "${intent.action}")
-                }
-
-                when (intent.action) {
-                    BluetoothAdapter.ACTION_DISCOVERY_STARTED -> {
-                        Log.d("BroadcastReceiver", "Device discovery started")
-                    }
-                    BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
-                        Log.d("BroadcastReceiver", "Device discovery finished")
-                        //  MainActivity1.myDevice?.fetchUuidsWithSdp()
-
-                    }
-                    BluetoothDevice.ACTION_UUID -> {
-                        val uuidExtra = intent.getParcelableArrayExtra(BluetoothDevice.EXTRA_UUID)
-                        Log.d("BroadcastReceiver", "${uuidExtra?.toSet()}")
-                    }
-
-                    BluetoothDevice.ACTION_FOUND -> {
-                        Log.d("BroadcastReceiver", "ACTION_FOUND")
-                        val device: BluetoothDevice? =
-                            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
-                        Log.d("BroadcastReceiver", "${device?.name}")
-                        Log.d("BroadcastReceiver", "${device?.address}")
-                        if (device?.name == "Xiaomi Buds 3T Pro") {
-                            //  MainActivity1.myDevice = device
-                        }
-                    }
-                }
-            }
+                ),
+                1
+            )
         }
         val intentFilter = IntentFilter().apply {
-//            addAction(BluetoothDevice.ACTION_FOUND)
-//            addAction(BluetoothDevice.ACTION_UUID)
-//            addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED)
-//            addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
-            addAction(BluetoothHeadset.ACTION_VENDOR_SPECIFIC_HEADSET_EVENT)
-            addAction(BluetoothHeadset.VENDOR_SPECIFIC_HEADSET_EVENT_COMPANY_ID_CATEGORY+"."+ BluetoothAssignedNumbers.PLANTRONICS)
-            addAction(BluetoothHeadset.ACTION_AUDIO_STATE_CHANGED);
-            addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED);
+//            for (i in 1..1000) {
+//                addAction(
+//                    BluetoothHeadset.VENDOR_SPECIFIC_HEADSET_EVENT_COMPANY_ID_CATEGORY +
+//                            '.' + i
+//                )
+//            }
+          // addAction(BluetoothHeadset.VENDOR_SPECIFIC_HEADSET_EVENT_COMPANY_ID_CATEGORY + "." + 0x038F.toString())
+           addAction("android.bluetooth.headset.intent.category.companyid.911")
+            addAction(BluetoothHeadset.ACTION_AUDIO_STATE_CHANGED)
+            addAction(BluetoothHeadset.VENDOR_RESULT_CODE_COMMAND_ANDROID)
+            addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
+            addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
+            addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
         }
 
+
+
+        val btClassicReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                Log.e("BroadcastReceiver", "${intent.action}")
+
+                when (intent.action) {
+                    BluetoothHeadset.EXTRA_STATE  -> {
+                        Log.e("BroadcastReceiver", "${intent.action}")
+                    }BluetoothHeadset.ACTION_VENDOR_SPECIFIC_HEADSET_EVENT -> {
+                        Log.e("BroadcastReceiver", "${intent.action}")
+                    }
+                    BluetoothHeadset.EXTRA_VENDOR_SPECIFIC_HEADSET_EVENT_CMD  -> {
+                        Log.e("BroadcastReceiver", "${intent.action}")
+                    }
+                    BluetoothHeadset.EXTRA_VENDOR_SPECIFIC_HEADSET_EVENT_CMD_TYPE -> {
+                        Log.e("BroadcastReceiver", "${intent.action}")
+                    }
+                    BluetoothHeadset.EXTRA_VENDOR_SPECIFIC_HEADSET_EVENT_ARGS -> {
+                        Log.e("BroadcastReceiver", "${intent.action}")
+                    }
+                    BluetoothDevice.ACTION_ACL_CONNECTED ->{
+                        Log.e("BroadcastReceiver", "${intent.action}")
+                    }
+                    BluetoothDevice.ACTION_ACL_DISCONNECTED ->{
+                        Log.e("BroadcastReceiver", "${intent.action}")
+                    }
+                }
+
+
+//                when (intent.action) {
+//                    BluetoothAdapter.ACTION_DISCOVERY_STARTED -> {
+//                        Log.d("BroadcastReceiver", "Device discovery started")
+//                    }
+//                    BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
+//                        Log.d("BroadcastReceiver", "Device discovery finished")
+//                        //  MainActivity1.myDevice?.fetchUuidsWithSdp()
+//
+//                    }
+//                    BluetoothDevice.ACTION_UUID -> {
+//                        val uuidExtra = intent.getParcelableArrayExtra(BluetoothDevice.EXTRA_UUID)
+//                        Log.d("BroadcastReceiver", "${uuidExtra?.toSet()}")
+//                    }
+//
+//                    BluetoothDevice.ACTION_FOUND -> {
+//                        Log.d("BroadcastReceiver", "ACTION_FOUND")
+//                        val device: BluetoothDevice? =
+//                            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+//                        Log.d("BroadcastReceiver", "${device?.name}")
+//                        Log.d("BroadcastReceiver", "${device?.address}")
+//                        if (device?.name == "Xiaomi Buds 3T Pro") {
+//                            //  MainActivity1.myDevice = device
+//                        }
+//                    }
+//                }
+            }
+        }
         registerReceiver(btClassicReceiver, intentFilter)
 
         setContent {
@@ -290,22 +329,22 @@ class MainActivity1 : ComponentActivity() {
             return b.array()
         }
         setContent {
-         //   MyApplicationTheme {
-                Scaffold(
+            //   MyApplicationTheme {
+            Scaffold(
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(10.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(10.dp),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
 
-                        Button(onClick = {
+                    Button(onClick = {
 
 
-                            CoroutineScope(Dispatchers.IO).launch {
-                                BluetoothService().connectDevice(headphones, uuid)
+                        CoroutineScope(Dispatchers.IO).launch {
+                            BluetoothService().connectDevice(headphones, uuid)
 //                                val isConnected = BluetoothService.connected()
 //                                val isConnection = BluetoothService.statusConnection
 //                                if (isConnected && !isConnection) {
@@ -314,66 +353,66 @@ class MainActivity1 : ComponentActivity() {
 //                                } else if (!isConnected && !isConnection) {
 //                                    BluetoothService.connectDevice(headphones, uuid)
 //                                }
-                            }
-
-                        }) {
-                            Text("TEST")
-
                         }
-                        Button(onClick = {
+
+                    }) {
+                        Text("TEST")
+
+                    }
+                    Button(onClick = {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            when (BluetoothService().isConnected()) {
+                                true -> BluetoothService().sendData(byteArrayOfInts(headsetInfo))
+                                false -> BluetoothService().connectDevice(headphones, uuid)
+                            }
+                        }
+                    }) {
+                        Text("Device INFO")
+                    }
+
+                    Button(
+                        onClick = {
                             CoroutineScope(Dispatchers.IO).launch {
                                 when (BluetoothService().isConnected()) {
-                                    true -> BluetoothService().sendData(byteArrayOfInts(headsetInfo))
-                                    false -> BluetoothService().connectDevice(headphones, uuid)
-                                }
-                            }
-                        }) {
-                            Text("Device INFO")
-                        }
-
-                        Button(
-                            onClick = {
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    when (BluetoothService().isConnected()) {
-                                        true -> BluetoothService().sendData(byteArrayOfInts(arr1))
-                                        false -> BluetoothService().connectDevice(headphones, uuid)
-                                    }
-                                }
-
-                            }
-
-                        ) {
-                            Text("Шум")
-                        }
-
-                        Button(onClick = {
-                            CoroutineScope(Dispatchers.IO).launch {
-                                when (BluetoothService().isConnected()) {
-                                    true -> BluetoothService().sendData(byteArrayOfInts(arr2))
+                                    true -> BluetoothService().sendData(byteArrayOfInts(arr1))
                                     false -> BluetoothService().connectDevice(headphones, uuid)
                                 }
                             }
 
-
-                        }) {
-                            Text("Прозрачность")
                         }
-                        Button(onClick = {
 
+                    ) {
+                        Text("Шум")
+                    }
 
-                            CoroutineScope(Dispatchers.IO).launch {
-                                when (BluetoothService().isConnected()) {
-                                    true -> BluetoothService().sendData(byteArrayOfInts(arr0))
-                                    false -> BluetoothService().connectDevice(headphones, uuid)
-                                }
+                    Button(onClick = {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            when (BluetoothService().isConnected()) {
+                                true -> BluetoothService().sendData(byteArrayOfInts(arr2))
+                                false -> BluetoothService().connectDevice(headphones, uuid)
                             }
-
-                        }) {
-                            Text("Отключить")
                         }
+
+
+                    }) {
+                        Text("Прозрачность")
+                    }
+                    Button(onClick = {
+
+
+                        CoroutineScope(Dispatchers.IO).launch {
+                            when (BluetoothService().isConnected()) {
+                                true -> BluetoothService().sendData(byteArrayOfInts(arr0))
+                                false -> BluetoothService().connectDevice(headphones, uuid)
+                            }
+                        }
+
+                    }) {
+                        Text("Отключить")
                     }
                 }
-          //  }
+            }
+            //  }
         }
     }
 }

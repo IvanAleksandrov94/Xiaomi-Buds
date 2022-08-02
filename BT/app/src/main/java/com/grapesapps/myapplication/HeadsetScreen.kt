@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothHeadset.VENDOR_RESULT_CODE_COMMAND_ANDROID
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.media.MediaPlayer
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.rememberSplineBasedDecay
@@ -42,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.grapesapps.myapplication.entity.CHeadsetBatteryStatus
 import com.grapesapps.myapplication.entity.HeadsetMainSetting
@@ -50,7 +52,7 @@ import com.grapesapps.myapplication.entity.RHeadsetBatteryStatus
 import com.grapesapps.myapplication.ui.theme.BudsApplicationTheme
 import com.grapesapps.myapplication.vm.Home
 import com.grapesapps.myapplication.vm.HomeState
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import java.lang.reflect.Method
 
 
@@ -81,11 +83,11 @@ fun HeadsetScreen(
     val bluetoothAdapter: BluetoothAdapter? = remember { bluetoothManager.adapter }
 
     val btDevice = bluetoothAdapter?.bondedDevices?.firstOrNull { it.name == "Xiaomi Buds 3T Pro" }
+
+    val mMediaPlayer = MediaPlayer.create(context,  R.raw.xiaomi_sound)
+
+
     lateinit var btHeadset: BluetoothHeadset
-
-
-
-
 
 
     bluetoothManager.adapter?.getProfileProxy(
@@ -95,10 +97,12 @@ fun HeadsetScreen(
                     val mCurrentHeadset = proxy as BluetoothHeadset
                     btHeadset = mCurrentHeadset
                     Log.i("MAIN", "BluetoothHeadset ПОДКЛЮЧЕН")
-//                      btHeadset.sendVendorSpecificResultCode(btDevice, "+XIAOMI", "FF01020103020501FF")
+                     //btHeadset.sendVendorSpecificResultCode(btDevice, "+XIAOMI", "FF01020103020501FF")
 //                      btHeadset.sendVendorSpecificResultCode(btDevice, "+XIAOMI", "FF01020103020500FF")
+
                 }
             }
+
 
             override fun onServiceDisconnected(profile: Int) {
                 if (profile == BluetoothProfile.HEADSET) {
@@ -281,12 +285,24 @@ fun HeadsetScreen(
                                             ),
                                             onCheckedChange = {
                                                 if (it) {
-                                                    btHeadset.sendVendorSpecificResultCode(
-                                                        btDevice,
-                                                        "+XIAOMI",
-                                                        "FF01020103020501FF"
-                                                    )
-//
+                                                    GlobalScope.launch(Dispatchers.IO) {
+                                                        btHeadset.sendVendorSpecificResultCode(
+                                                            btDevice,
+                                                            "OK",
+                                                            ""
+                                                        )
+                                                        btHeadset.sendVendorSpecificResultCode(
+                                                            btDevice,
+                                                            "+XIAOMI",
+                                                            "FF010201020101FF"
+                                                        )
+                                                        delay(100L)
+                                                        btHeadset.sendVendorSpecificResultCode(
+                                                            btDevice,
+                                                            "+XIAOMI",
+                                                            "FF01020103020501FF"
+                                                        )
+                                                    }
                                                 } else {
                                                     btHeadset.sendVendorSpecificResultCode(
                                                         btDevice,
@@ -328,6 +344,7 @@ fun HeadsetScreen(
 
                                             ),
                                             onCheckedChange = {
+                                                viewModel.onSelectAutoSearchEar()
                                                 //  switchChecked = it
                                             }
 
@@ -348,6 +365,7 @@ fun HeadsetScreen(
 
                                             ),
                                             onCheckedChange = {
+                                                viewModel.onSelectAutoPhoneAnswer()
                                                 //   switchChecked = it
                                             }
 
@@ -368,6 +386,15 @@ fun HeadsetScreen(
 
                                             ),
                                             onCheckedChange = {
+                                                if(mMediaPlayer.isPlaying){
+                                                    mMediaPlayer.stop()
+                                                    mMediaPlayer.prepareAsync();
+                                                }else{
+                                                    viewModel.onStartHeadTest()
+                                                    mMediaPlayer.isLooping = false
+                                                    mMediaPlayer.start()
+                                                }
+                                               // viewModel.onStartHeadTest()
                                                 //  switchChecked = it
                                             }
 
