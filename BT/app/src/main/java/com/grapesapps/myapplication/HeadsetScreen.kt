@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothHeadset.VENDOR_RESULT_CODE_COMMAND_ANDROID
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.media.AudioFormat.*
 import android.media.MediaPlayer
 import android.util.Log
 import android.widget.Toast
@@ -54,6 +55,9 @@ import com.grapesapps.myapplication.vm.Home
 import com.grapesapps.myapplication.vm.HomeState
 import kotlinx.coroutines.*
 import java.lang.reflect.Method
+import android.media.AudioManager
+import android.media.audiofx.Virtualizer
+import android.media.audiofx.Virtualizer.VIRTUALIZATION_MODE_BINAURAL
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -84,7 +88,20 @@ fun HeadsetScreen(
 
     val btDevice = bluetoothAdapter?.bondedDevices?.firstOrNull { it.name == "Xiaomi Buds 3T Pro" }
 
-    val mMediaPlayer = MediaPlayer.create(context,  R.raw.xiaomi_sound)
+    val mMediaPlayer = MediaPlayer.create(context, R.raw.xiaomi_sound)
+
+    val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    val audioSessionId = audioManager.activeRecordingConfigurations
+    print(audioSessionId)
+
+    val virtualizer = Virtualizer(0, 0)
+
+
+    virtualizer.getSpeakerAngles(
+        0,
+        VIRTUALIZATION_MODE_BINAURAL,
+        intArrayOf(CHANNEL_OUT_FRONT_LEFT, CHANNEL_OUT_FRONT_RIGHT,CHANNEL_OUT_FRONT_CENTER)
+    )
 
 
     lateinit var btHeadset: BluetoothHeadset
@@ -97,7 +114,7 @@ fun HeadsetScreen(
                     val mCurrentHeadset = proxy as BluetoothHeadset
                     btHeadset = mCurrentHeadset
                     Log.i("MAIN", "BluetoothHeadset ПОДКЛЮЧЕН")
-                     //btHeadset.sendVendorSpecificResultCode(btDevice, "+XIAOMI", "FF01020103020501FF")
+                    //btHeadset.sendVendorSpecificResultCode(btDevice, "+XIAOMI", "FF01020103020501FF")
 //                      btHeadset.sendVendorSpecificResultCode(btDevice, "+XIAOMI", "FF01020103020500FF")
 
                 }
@@ -288,21 +305,11 @@ fun HeadsetScreen(
                                                     GlobalScope.launch(Dispatchers.IO) {
                                                         btHeadset.sendVendorSpecificResultCode(
                                                             btDevice,
-                                                            "OK",
-                                                            ""
-                                                        )
-                                                        btHeadset.sendVendorSpecificResultCode(
-                                                            btDevice,
-                                                            "+XIAOMI",
-                                                            "FF010201020101FF"
-                                                        )
-                                                        delay(100L)
-                                                        btHeadset.sendVendorSpecificResultCode(
-                                                            btDevice,
                                                             "+XIAOMI",
                                                             "FF01020103020501FF"
                                                         )
                                                     }
+
                                                 } else {
                                                     btHeadset.sendVendorSpecificResultCode(
                                                         btDevice,
@@ -386,15 +393,16 @@ fun HeadsetScreen(
 
                                             ),
                                             onCheckedChange = {
-                                                if(mMediaPlayer.isPlaying){
-                                                    mMediaPlayer.stop()
-                                                    mMediaPlayer.prepareAsync();
-                                                }else{
-                                                    viewModel.onStartHeadTest()
-                                                    mMediaPlayer.isLooping = false
-                                                    mMediaPlayer.start()
-                                                }
-                                               // viewModel.onStartHeadTest()
+                                                viewModel.onSelectSpectralAudio()
+//                                                if(mMediaPlayer.isPlaying){
+//                                                    mMediaPlayer.stop()
+//                                                    mMediaPlayer.prepareAsync();
+//                                                }else{
+//                                                    viewModel.onStartHeadTest()
+//                                                    mMediaPlayer.isLooping = false
+//                                                    mMediaPlayer.start()
+//                                                }
+                                                // viewModel.onStartHeadTest()
                                                 //  switchChecked = it
                                             }
 

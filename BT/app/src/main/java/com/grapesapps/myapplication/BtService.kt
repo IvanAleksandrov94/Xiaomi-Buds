@@ -25,16 +25,18 @@ class BluetoothService @Inject constructor() {
 
         // headset info and version
         private val service0 = listOf(
-            0xfe, 0xdc, 0xba, 0x01, 0xf4, 0x00, 0x0d, 0x00,
-            0x05, 0x0a, 0x00, 0x22, 0x00, 0x00, 0x98, 0x42,
-            0x0a, 0x00, 0x00, 0x00, 0xef
+            0xfe,0xdc,0xba,0x01,0xf4,0x00,0x12,0x00,0x63,0x0f,0x00,0x21,0x01,0x12,0xa9,0xa7,0x43,0x1b,0x26,0x13,0xc1,0x56,0x07,0x04,0xc2,0xef
         )
+        //fedcba01f40012006e0f002101daef9a43023beec10a6445c1ef
+        //fedcba01f40012006f0f002101c15a9943877edac1ecce4ac1ef
+        //fedcba01f40012009e0f002101618ca7436c875ec11312d8c1ef
+        //fedcba01f4001200630f00210112a9a7431b2613c1560704c2ef
+
+
 
         // headset info and version
         private val service1 = listOf(
-            0xfe, 0xdc, 0xba, 0xc1, 0x02, 0x00, 0x05, 0x05, 0xff, 0xff, 0xff,
-            0xff, 0xef, 0xfe, 0xdc, 0xba, 0xc1, 0x09, 0x00, 0x05, 0x06, 0xff,
-            0xff, 0xff, 0xff, 0xef
+            0xfe,0xdc,0xba,0xc1,0x51,0x00,0x03,0x01,0x01,0x00,0xef
         )
 
         // headset info and version
@@ -188,11 +190,12 @@ class BluetoothService @Inject constructor() {
         //fe dc ba c7 f4 00 06 0a 04 00 06 02 02 ef
     }
 
-//    suspend fun sendServiceMessage() {
-//        sendData(byteArrayOfInts(service0))
-//        sendData(byteArrayOfInts(service1))
-//        sendData(byteArrayOfInts(service2))
-//    }
+    suspend fun sendServiceMessage(data: ByteArray) {
+      //  val parsed = data.joinToString(" ") { "%02x".format(it) }
+      ///  Log.i("VM Bluetooth", parsed)
+        sendData(data)
+
+    }
 
     suspend fun activateSpectralAudio() {
         sendData(command2.map { it.toByte() }.toByteArray())
