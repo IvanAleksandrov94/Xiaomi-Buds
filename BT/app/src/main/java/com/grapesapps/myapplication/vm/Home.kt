@@ -2,17 +2,14 @@ package com.grapesapps.myapplication.vm
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothHeadset
 import android.content.Context
-import android.media.MediaPlayer
-import android.media.audiofx.Virtualizer
+import android.media.AudioManager
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.grapesapps.myapplication.BluetoothService
-import com.grapesapps.myapplication.R
 import com.grapesapps.myapplication.entity.*
 import com.grapesapps.myapplication.model.DaggerRepositoryComponent
 import com.grapesapps.myapplication.model.SharedPrefManager
@@ -60,6 +57,8 @@ class Home @Inject constructor(
     private val sharedPrefManager: SharedPrefManager
     private val uuid: UUID = UUID.fromString("0000fd2d-0000-1000-8000-00805f9b34fb")
     private fun byteArrayOfInts(ints: List<Int>) = ByteArray(ints.size) { pos -> ints[pos].toByte() }
+    private lateinit var inputStream: InputStream
+    private lateinit var audioManager: AudioManager
 
 
     // in Service
@@ -75,7 +74,6 @@ class Home @Inject constructor(
         -83, -78, -73, -68, -63, -58, -53, -48, -43,
         -38, -33, -28
     )
-    private lateinit var inputStream: InputStream
 
 
     init {
@@ -91,7 +89,7 @@ class Home @Inject constructor(
 
 
     @SuppressLint("MissingPermission")
-    fun connectDevice(btDevice: BluetoothDevice) {
+    fun connectDevice(btDevice: BluetoothDevice, audio: AudioManager) {
         val isConnected = btService.isConnected()
         val isConnection = btService.statusConnection
         if (isConnected && !isConnection) {
@@ -100,6 +98,7 @@ class Home @Inject constructor(
                 inputStream = btService.inputStream
                 btService.getHeadsetInfo()
                 listenData()
+                audioManager = audio
             }
         } else if (!isConnected && !isConnection) {
             viewModelScope.launch(Dispatchers.IO) {
@@ -107,6 +106,7 @@ class Home @Inject constructor(
                 inputStream = btService.inputStream
                 btService.getHeadsetInfo()
                 listenData()
+                audioManager = audio
             }
 
         }
@@ -115,16 +115,7 @@ class Home @Inject constructor(
     fun onSelectSpectralAudio() {
         val isConnected = btService.isConnected()
         viewModelScope.launch(Dispatchers.IO) {
-            if (isConnected) {
-                btService.sendData(
-                    byteArrayOfInts(
-                        listOf(
-                            0xfe,0xdc,0xba,0xc1,0xf4,0x00,0x11,0x1f,0x0f,0x00,0x21,0x01,0x38,0x4c,0x9e,0x43,0xaa,0xb3,0xac,0xc1,0x79,0xc4,0x32,0xc2,0xef
-                        )
-                    )
-                )
-               // btService.activateSpectralAudio()
-            }
+
 
         }
     }
@@ -201,88 +192,17 @@ class Home @Inject constructor(
                     inputStream.read(tempBuffer, 0, bytes)
 
 
-                    // Log.i("VM Bluetooth", "${tempBuffer.map { it.toUByte() }}")
-                    if(tempBuffer.size != 25) {
-                        val parsed = tempBuffer.joinToString(" ") { "%02x".format(it) }
-                        Log.i("VM Bluetooth", parsed)
-                    }
-
-
-                    //fe dc ba c1 f4 00 11 22 0f 00 21 00 01 e6 b2 43 9b 1d 1c c1 74 86 93 41 ef
-                    //fe dc ba 01 f4 00 12 00 22 0f 00 21 01 01 e6 b2 43 9b 1d 1c c1 74 86 93 41 ef
-
-                    //fe dc ba c1 f4 00 11 63 0f 00 21 01 12 a9 a7 43 1b 26 13 c1 56 07 04 c2 ef
-                    //fe dc ba 01 f4 00 12 00 63 0f 00 21 01 12 a9 a7 43 1b 26 13 c1 56 07 04 c2 ef
-
-
-                    //fe dc ba c1 f4 00 11 65 0f 00 21 01 0f 8f a7 43 63 fd 0d c1 05 af fb c1 ef
-                    //fe dc ba 01 f4 00 12 00 65 0f 00 21 01 0f 8f a7 43 63 fd 0d c1 05 af fb c1 ef
-
-
-                    //fe dc ba c1 f4 00 11 f9 0f 00 21 01 db 01 8b 43 ef 9a 76 c1 a6 c0 df c1 ef
-                    //fe dc ba 01 f4 00 12 00 f9 0f 00 21 01 db 01 8b 43 ef 9a 76 c1 a6 c0 df c1 ef
-
-                    //fe dc ba c1 f4 00 11 35 0f 00 21 01 80 6c 5f 40 b4 88 bd be 67 54 ef c1 ef
-                    //fe dc ba 01 f4 00 12 00 35 0f 00 21 01 80 6c 5f 40 b4 88 bd be 67 54 ef c1 ef
-
-
-
-                    if(tempBuffer.size == 27 ){
-                        btService.sendData(
-                            byteArrayOfInts(
-                                listOf(
-                                    0xfe,0xdc,0xba,0xc1,0x51,0x00,0x03,0x1a,0x01,0x00,0xef
-                                )
-                            )
-                        )
-
-                    }
-
-                    if (tempBuffer.size == 26) {
-                        btService.sendData(
-                            byteArrayOfInts(
-                                listOf(
-                                    0xfe,0xdc,0xba,0xc1,0x50,0x00,0x12,0x19,0x01,0x0c,0xaf,0xd8,0xf7,0xf2,0x42,0xd8,0x5a,0x14,0x4b,0xf0,0xeb,0xe5,0xa5,0xa7,0x5e,0xef
-                                )
-                            )
-                        )
-                    }
-
-                    if(tempBuffer.size == 37){
-                        btService.sendData(
-                            byteArrayOfInts(
-                                listOf(
-                                    0xfe,0xdc,0xba,0x01,0x50,0x00,0x13,0x00,0x02,0x01,0x05,0x63,0x7f,0x35,0x5b,0xe8,0xe6,0xf4,0xa6,0x8c,0x04,
-                                    0x81,0xc6,0x50,0x3c,0xb8,0xef
-                                )
-                            )
-                        )
-                    }
-                    if(tempBuffer.size == 11){
-                        btService.sendData(
-                            byteArrayOfInts(
-                                listOf(
-                                    0xfe,0xdc,0xba,0x01,0x51,0x00,0x03,0x00,0x01,0x01,0xef
-                                )
-                            )
-                        )
-                        btService.sendData(
-                            byteArrayOfInts(
-                                listOf(
-                                    0xfe,0xdc,0xba,0xc1,0xf3,0x00,0x11,0x04,0x00,0x01,0x00,0x02,0x00,0x03,0x00,0x04,0x00,0x0a,0x00,0x0b,0x00,0x0f,0x00,0x24,0xef
-                                )
-                            )
-                        )
-                    }
-
-
-
-
                     if (tempBuffer.size == 25) {
-//                        Log.i("VM Bluetooth", "!!!!!!!")
+                        Log.i("VM Bluetooth", "!!!!!!!")
 //                        val parsed = tempBuffer.joinToString(" ") { "%02x".format(it) }
 //                        Log.i("VM Bluetooth", parsed)
                         val mutableList: MutableList<Byte> = tempBuffer.toMutableList()
+
+                        val gyroConverted = gyroConvert(mutableList)
+
+                        audioManager.setParameters("pitch=${gyroConverted.pitch};row=${gyroConverted.row};yaw=${gyroConverted.yaw}")
+                        //audioManager.setParameters("pitch=-8.154936;row=-39.00848;yaw=326.34033")
+
                         val last = mutableList[24]
 
                         mutableList[3] = 0x01.toByte()
@@ -290,10 +210,21 @@ class Home @Inject constructor(
                         mutableList[7] = 0x00.toByte()
                         mutableList[25] = last
 
-//                        Log.i("VM Bluetooth", data.map { it.toByte() }.joinToString(" ") { "%02x".format(it) })
-//                        Log.i(
-//                            "VM Bluetooth",
-//                            mutableList.toImmutableList().map { it.toByte() }.joinToString(" ") { "%02x".format(it) })
+
+                        //0F 00 21 01 CC EB B3 43 E6 74 E4 C0 B7 C9 1D C2
+                        //String=yaw=359.84216;pitch=-7.13927;row=-39.446987;
+                        //[15, 0, 33, 1, -52, -21, -77, 67, -26, 116, -28, -64, -73, -55, 29, -62]
+
+//                        val bytesT = listOf(15, 0, 33, 1, -52, -21, -77, 67, -26, 116, -28, -64, -73, -55, 29, -62)
+//                        val parsedT = bytesT.joinToString(" ") { "%02x".format(it) }
+
+                        //  val bytesT = listOf(0x43, 0xB3, 0xEB, 0xCC)
+//                        val float2 = (3*10).toInt().pow(3)
+
+
+                        //   Log.i("VM Bluetooth", "$bytesT")
+
+
                         btService.sendServiceMessage(mutableList.toByteArray())
                         //    btService.sendServiceMessage()
                     }
@@ -499,7 +430,6 @@ class Home @Inject constructor(
         return FirmwareInfo(version = b.toString())
     }
 
-
     private fun bytePercentConverter(p: Byte): HeadsetBatteryStatus {
         if (p.toInt() == -1) {
             return HeadsetBatteryStatus("-")
@@ -511,4 +441,21 @@ class Home @Inject constructor(
         }
         return HeadsetBatteryStatus("$p%")
     }
+
+    private fun gyroConvert(gyroData: MutableList<Byte>): HeadsetGyro {
+        val yaw = gyroData.slice(12..15).map { "%02x".format(it) }.asReversed().joinToString(separator = "")
+        val pitch = gyroData.slice(16..19).map { "%02x".format(it) }.asReversed().joinToString(separator = "")
+        val row = gyroData.slice(20..23).map { "%02x".format(it) }.asReversed().joinToString(separator = "")
+
+        val yawConverted = gyroConvertPosition(yaw)
+        val pitchConverted = gyroConvertPosition(pitch)
+        val rowConverted = gyroConvertPosition(row)
+        return HeadsetGyro(yaw = yawConverted, pitch = pitchConverted, row = rowConverted)
+    }
+
+    private fun gyroConvertPosition(position: String?): Float {
+        if (position == null) return 0.0f
+        return java.lang.Float.intBitsToFloat(position.toLong(16).toInt())
+    }
 }
+

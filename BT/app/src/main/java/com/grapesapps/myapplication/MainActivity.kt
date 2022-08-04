@@ -4,11 +4,18 @@ package com.grapesapps.myapplication
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.bluetooth.*
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothHeadset
+import android.bluetooth.BluetoothManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.AudioFormat
+import android.media.audiofx.AudioEffect
+import android.media.audiofx.EnvironmentalReverb
+import android.media.audiofx.Virtualizer
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -16,20 +23,28 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.navigation.NavHostController
 import com.google.accompanist.navigation.animation.rememberAnimatedNavController
 import com.grapesapps.myapplication.model.SharedPrefManager
 import com.grapesapps.myapplication.view.navigation.Navigation
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
 import java.util.*
 
@@ -40,9 +55,12 @@ class MainActivity : ComponentActivity() {
     private lateinit var navController: NavHostController
     private lateinit var pref: SharedPrefManager
 
+    @RequiresApi(Build.VERSION_CODES.N)
     @OptIn(ExperimentalUnsignedTypes::class, ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ActivityCompat.requestPermissions(
@@ -58,7 +76,7 @@ class MainActivity : ComponentActivity() {
                     Manifest.permission.ACCESS_FINE_LOCATION,
                     Manifest.permission.ACCESS_COARSE_LOCATION,
 
-                ),
+                    ),
                 1
             )
         }
@@ -69,28 +87,66 @@ class MainActivity : ComponentActivity() {
 //                            '.' + i
 //                )
 //            }
-          // addAction(BluetoothHeadset.VENDOR_SPECIFIC_HEADSET_EVENT_COMPANY_ID_CATEGORY + "." + 0x038F.toString())
-           addAction("android.bluetooth.headset.intent.category.companyid.911")
+            // addAction(BluetoothHeadset.VENDOR_SPECIFIC_HEADSET_EVENT_COMPANY_ID_CATEGORY + "." + 0x038F.toString())
+            addAction("android.bluetooth.headset.intent.category.companyid.911")
             addAction(BluetoothHeadset.ACTION_AUDIO_STATE_CHANGED)
             addAction(BluetoothHeadset.VENDOR_RESULT_CODE_COMMAND_ANDROID)
             addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
             addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
             addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
+            addAction(AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION)
+            addAction(AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION)
         }
-
 
 
         val btClassicReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 Log.e("BroadcastReceiver", "${intent.action}")
 
+                val sessionStates = arrayOf(
+                    AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION,
+                    AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION
+                )
+                if (sessionStates.contains(intent.action)) {
+                    val sessionID = intent.getIntExtra(AudioEffect.EXTRA_AUDIO_SESSION, AudioEffect.ERROR)
+                    Log.e("BroadcastReceiver", "${sessionID}")
+                    val mainV = Virtualizer(0, sessionID)
+                    var rev = EnvironmentalReverb(0, sessionID)
+
+
+
+                    rev.enabled = true
+
+
+                    val canVirtualize =
+                        mainV.canVirtualize(AudioFormat.CHANNEL_OUT_DEFAULT, Virtualizer.VIRTUALIZATION_MODE_BINAURAL)
+                    Log.e("BroadcastReceiver", "Virtualizer canVirtualize $canVirtualize")
+                    val result = mainV.getSpeakerAngles(
+                        AudioFormat.CHANNEL_OUT_MONO,
+                        Virtualizer.VIRTUALIZATION_MODE_BINAURAL,
+                        intArrayOf(
+                            -90,
+                            -90,
+                            -90,
+                        )
+                    )
+                    mainV.setStrength(0)
+
+                    val a = mainV.setEnabled(true)
+                    mainV.forceVirtualizationMode(Virtualizer.VIRTUALIZATION_MODE_BINAURAL)
+
+
+                    Log.e("BroadcastReceiver", "Virtualizer comlete $a is Supported $result")
+                }
+
                 when (intent.action) {
-                    BluetoothHeadset.EXTRA_STATE  -> {
-                        Log.e("BroadcastReceiver", "${intent.action}")
-                    }BluetoothHeadset.ACTION_VENDOR_SPECIFIC_HEADSET_EVENT -> {
+                    BluetoothHeadset.EXTRA_STATE -> {
                         Log.e("BroadcastReceiver", "${intent.action}")
                     }
-                    BluetoothHeadset.EXTRA_VENDOR_SPECIFIC_HEADSET_EVENT_CMD  -> {
+                    BluetoothHeadset.ACTION_VENDOR_SPECIFIC_HEADSET_EVENT -> {
+                        Log.e("BroadcastReceiver", "${intent.action}")
+                    }
+                    BluetoothHeadset.EXTRA_VENDOR_SPECIFIC_HEADSET_EVENT_CMD -> {
                         Log.e("BroadcastReceiver", "${intent.action}")
                     }
                     BluetoothHeadset.EXTRA_VENDOR_SPECIFIC_HEADSET_EVENT_CMD_TYPE -> {
@@ -99,10 +155,10 @@ class MainActivity : ComponentActivity() {
                     BluetoothHeadset.EXTRA_VENDOR_SPECIFIC_HEADSET_EVENT_ARGS -> {
                         Log.e("BroadcastReceiver", "${intent.action}")
                     }
-                    BluetoothDevice.ACTION_ACL_CONNECTED ->{
+                    BluetoothDevice.ACTION_ACL_CONNECTED -> {
                         Log.e("BroadcastReceiver", "${intent.action}")
                     }
-                    BluetoothDevice.ACTION_ACL_DISCONNECTED ->{
+                    BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
                         Log.e("BroadcastReceiver", "${intent.action}")
                     }
                 }

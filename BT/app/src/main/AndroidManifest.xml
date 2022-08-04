@@ -14,6 +14,7 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
 
     <application
         android:allowBackup="true"
@@ -25,6 +26,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication"
         android:name=".BudsApp"
+        android:extractNativeLibs="true"
         tools:targetApi="31">
         <activity
             android:name=".MainActivity"

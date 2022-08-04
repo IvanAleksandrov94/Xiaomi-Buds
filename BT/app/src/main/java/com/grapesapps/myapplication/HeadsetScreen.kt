@@ -6,6 +6,8 @@ import android.bluetooth.BluetoothHeadset.VENDOR_RESULT_CODE_COMMAND_ANDROID
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.hardware.Sensor
+import android.hardware.SensorManager
 import android.media.AudioFormat.*
 import android.media.MediaPlayer
 import android.util.Log
@@ -58,6 +60,7 @@ import java.lang.reflect.Method
 import android.media.AudioManager
 import android.media.audiofx.Virtualizer
 import android.media.audiofx.Virtualizer.VIRTUALIZATION_MODE_BINAURAL
+import androidx.core.content.ContextCompat
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -91,18 +94,6 @@ fun HeadsetScreen(
     val mMediaPlayer = MediaPlayer.create(context, R.raw.xiaomi_sound)
 
     val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    val audioSessionId = audioManager.activeRecordingConfigurations
-    print(audioSessionId)
-
-    val virtualizer = Virtualizer(0, 0)
-
-
-    virtualizer.getSpeakerAngles(
-        0,
-        VIRTUALIZATION_MODE_BINAURAL,
-        intArrayOf(CHANNEL_OUT_FRONT_LEFT, CHANNEL_OUT_FRONT_RIGHT,CHANNEL_OUT_FRONT_CENTER)
-    )
-
 
     lateinit var btHeadset: BluetoothHeadset
 
@@ -114,10 +105,26 @@ fun HeadsetScreen(
                     val mCurrentHeadset = proxy as BluetoothHeadset
                     btHeadset = mCurrentHeadset
                     Log.i("MAIN", "BluetoothHeadset ПОДКЛЮЧЕН")
-                    //btHeadset.sendVendorSpecificResultCode(btDevice, "+XIAOMI", "FF01020103020501FF")
-//                      btHeadset.sendVendorSpecificResultCode(btDevice, "+XIAOMI", "FF01020103020500FF")
+                    val connect = proxy.javaClass.getDeclaredMethod(
+                        "connect",
+                        BluetoothDevice::class.java
+                    )
+                    connect.isAccessible = true
+                    connect.invoke(proxy, btDevice)
+                  //  BluetoothAdapter.getDefaultAdapter().closeProfileProxy(profile, proxy)
 
                 }
+                
+//                if (profile == BluetoothProfile.A2DP) {
+//                    Log.i("MAIN", "BluetoothHeadset A2DP")
+//                    val mCurrentHeadset = proxy as BluetoothA2dp
+//                    Log.i("MAIN", "isA2dpPlaying ${ mCurrentHeadset.isA2dpPlaying(btDevice)}")
+//                    mCurrentHeadset.javaClass
+//                        .getMethod("connect", BluetoothDevice::class.java)
+//                        .invoke(mCurrentHeadset, btDevice)
+//
+//                  //  btHeadset = mCurrentHeadset
+//                }
             }
 
 
@@ -128,7 +135,7 @@ fun HeadsetScreen(
                 }
             }
 
-
+           //  HEADSET_CLIENT = 16;
         }, BluetoothProfile.HEADSET
     )
 
@@ -139,7 +146,7 @@ fun HeadsetScreen(
         launch {
 
             if (btDevice != null) {
-                viewModel.connectDevice(btDevice)
+                viewModel.connectDevice(btDevice, audio = audioManager)
             } else {
                 viewModel.searchDevices()
             }
@@ -155,7 +162,7 @@ fun HeadsetScreen(
         when (lifecycleState) {
             Lifecycle.Event.ON_RESUME -> {
                 if (btDevice != null) {
-                    viewModel.connectDevice(btDevice)
+                    viewModel.connectDevice(btDevice, audioManager)
                 }
             }
             Lifecycle.Event.ON_CREATE -> {
@@ -308,7 +315,23 @@ fun HeadsetScreen(
                                                             "+XIAOMI",
                                                             "FF01020103020501FF"
                                                         )
+                                                        delay(150L)
+                                                        btHeadset.sendVendorSpecificResultCode(
+                                                            btDevice,
+                                                            "+XIAOMI",
+                                                            "FF010201020102FF"
+                                                        )
+//                                                        btHeadset.sendVendorSpecificResultCode(
+//                                                            btDevice,
+//                                                            "+XIAOMI",
+//                                                            "FF010201020101FF"
+//                                                        )
+
+
+
+
                                                     }
+
 
                                                 } else {
                                                     btHeadset.sendVendorSpecificResultCode(
@@ -394,16 +417,16 @@ fun HeadsetScreen(
                                             ),
                                             onCheckedChange = {
                                                 viewModel.onSelectSpectralAudio()
-//                                                if(mMediaPlayer.isPlaying){
-//                                                    mMediaPlayer.stop()
-//                                                    mMediaPlayer.prepareAsync();
-//                                                }else{
-//                                                    viewModel.onStartHeadTest()
-//                                                    mMediaPlayer.isLooping = false
-//                                                    mMediaPlayer.start()
-//                                                }
-                                                // viewModel.onStartHeadTest()
-                                                //  switchChecked = it
+                                                if(mMediaPlayer.isPlaying){
+                                                    mMediaPlayer.stop()
+                                                    mMediaPlayer.prepareAsync();
+                                                }else{
+                                                    viewModel.onStartHeadTest()
+                                                    mMediaPlayer.isLooping = false
+                                                    mMediaPlayer.start()
+                                                }
+                                                 viewModel.onStartHeadTest()
+                                                  switchChecked = it
                                             }
 
                                         )
