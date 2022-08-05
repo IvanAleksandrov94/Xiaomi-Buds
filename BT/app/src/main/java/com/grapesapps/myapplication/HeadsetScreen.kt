@@ -58,6 +58,7 @@ import com.grapesapps.myapplication.vm.HomeState
 import kotlinx.coroutines.*
 import java.lang.reflect.Method
 import android.media.AudioManager
+import android.media.AudioTrack
 import android.media.audiofx.Virtualizer
 import android.media.audiofx.Virtualizer.VIRTUALIZATION_MODE_BINAURAL
 import androidx.core.content.ContextCompat
@@ -95,7 +96,18 @@ fun HeadsetScreen(
 
     val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
+
+
+
     lateinit var btHeadset: BluetoothHeadset
+
+   val isActiveMusic = audioManager.isMusicActive
+    Log.e("MAIN", "is active Music $isActiveMusic")
+
+  // val aaa = audioManager.
+    //Log.e("MAIN", "SessionId $aaa")
+
+
 
 
     bluetoothManager.adapter?.getProfileProxy(
@@ -105,26 +117,17 @@ fun HeadsetScreen(
                     val mCurrentHeadset = proxy as BluetoothHeadset
                     btHeadset = mCurrentHeadset
                     Log.i("MAIN", "BluetoothHeadset ПОДКЛЮЧЕН")
-                    val connect = proxy.javaClass.getDeclaredMethod(
-                        "connect",
-                        BluetoothDevice::class.java
-                    )
-                    connect.isAccessible = true
-                    connect.invoke(proxy, btDevice)
+//                    val connect = proxy.javaClass.getDeclaredMethod(
+//                        "connect",
+//                        BluetoothDevice::class.java
+//                    )
+//                    connect.isAccessible = true
+//                    connect.invoke(proxy, btDevice)
                   //  BluetoothAdapter.getDefaultAdapter().closeProfileProxy(profile, proxy)
-
                 }
-                
-//                if (profile == BluetoothProfile.A2DP) {
-//                    Log.i("MAIN", "BluetoothHeadset A2DP")
-//                    val mCurrentHeadset = proxy as BluetoothA2dp
-//                    Log.i("MAIN", "isA2dpPlaying ${ mCurrentHeadset.isA2dpPlaying(btDevice)}")
-//                    mCurrentHeadset.javaClass
-//                        .getMethod("connect", BluetoothDevice::class.java)
-//                        .invoke(mCurrentHeadset, btDevice)
-//
-//                  //  btHeadset = mCurrentHeadset
-//                }
+
+
+
             }
 
 
@@ -135,16 +138,13 @@ fun HeadsetScreen(
                 }
             }
 
-           //  HEADSET_CLIENT = 16;
         }, BluetoothProfile.HEADSET
     )
 
 
 
     LaunchedEffect(key1 = viewModel, block = {
-
         launch {
-
             if (btDevice != null) {
                 viewModel.connectDevice(btDevice, audio = audioManager)
             } else {
@@ -310,6 +310,7 @@ fun HeadsetScreen(
                                             onCheckedChange = {
                                                 if (it) {
                                                     GlobalScope.launch(Dispatchers.IO) {
+
                                                         btHeadset.sendVendorSpecificResultCode(
                                                             btDevice,
                                                             "+XIAOMI",

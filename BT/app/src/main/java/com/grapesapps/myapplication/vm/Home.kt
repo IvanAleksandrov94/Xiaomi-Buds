@@ -192,16 +192,15 @@ class Home @Inject constructor(
                     inputStream.read(tempBuffer, 0, bytes)
 
 
-                    if (tempBuffer.size == 25) {
-                        Log.i("VM Bluetooth", "!!!!!!!")
+                    if (tempBuffer.size == 25 && tempBuffer[6] == 0x11.toByte()) {
+                        //  Log.i("VM Bluetooth", "!!!!!!!")
 //                        val parsed = tempBuffer.joinToString(" ") { "%02x".format(it) }
-//                        Log.i("VM Bluetooth", parsed)
+                        Log.i("VM Bluetooth", "${tempBuffer.map { it.toByte() }}")
                         val mutableList: MutableList<Byte> = tempBuffer.toMutableList()
 
                         val gyroConverted = gyroConvert(mutableList)
 
                         audioManager.setParameters("pitch=${gyroConverted.pitch};row=${gyroConverted.row};yaw=${gyroConverted.yaw}")
-                        //audioManager.setParameters("pitch=-8.154936;row=-39.00848;yaw=326.34033")
 
                         val last = mutableList[24]
 
@@ -209,21 +208,6 @@ class Home @Inject constructor(
                         mutableList.add(6, 0x12.toByte())
                         mutableList[7] = 0x00.toByte()
                         mutableList[25] = last
-
-
-                        //0F 00 21 01 CC EB B3 43 E6 74 E4 C0 B7 C9 1D C2
-                        //String=yaw=359.84216;pitch=-7.13927;row=-39.446987;
-                        //[15, 0, 33, 1, -52, -21, -77, 67, -26, 116, -28, -64, -73, -55, 29, -62]
-
-//                        val bytesT = listOf(15, 0, 33, 1, -52, -21, -77, 67, -26, 116, -28, -64, -73, -55, 29, -62)
-//                        val parsedT = bytesT.joinToString(" ") { "%02x".format(it) }
-
-                        //  val bytesT = listOf(0x43, 0xB3, 0xEB, 0xCC)
-//                        val float2 = (3*10).toInt().pow(3)
-
-
-                        //   Log.i("VM Bluetooth", "$bytesT")
-
 
                         btService.sendServiceMessage(mutableList.toByteArray())
                         //    btService.sendServiceMessage()
@@ -450,7 +434,19 @@ class Home @Inject constructor(
         val yawConverted = gyroConvertPosition(yaw)
         val pitchConverted = gyroConvertPosition(pitch)
         val rowConverted = gyroConvertPosition(row)
-        return HeadsetGyro(yaw = yawConverted, pitch = pitchConverted, row = rowConverted)
+
+        if ((yawConverted > 360 || yawConverted < -360) || (pitchConverted > 360 || pitchConverted < -360) || (rowConverted > 360 || rowConverted < -360)){
+            Log.e("AUDIO", "yaw:$yawConverted, pitch:$pitchConverted, row:$rowConverted ")
+
+        }
+
+
+
+        return HeadsetGyro(
+            yaw = if (yawConverted > 360 || yawConverted < -360) 0.0f else yawConverted,
+            pitch = if (pitchConverted > 360 || pitchConverted < -360) 0.0f else pitchConverted,
+            row = if (rowConverted > 360 || rowConverted < -360) 0.0f else rowConverted
+        )
     }
 
     private fun gyroConvertPosition(position: String?): Float {

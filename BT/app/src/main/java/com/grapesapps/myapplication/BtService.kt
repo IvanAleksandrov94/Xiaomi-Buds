@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothSocket
 import android.media.MediaPlayer
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.io.InputStream
@@ -210,6 +211,8 @@ class BluetoothService @Inject constructor() {
     private suspend fun reconnect(device: BluetoothDevice, uuid: UUID) = connectDevice(device, uuid)
 
     fun isConnected() = (this::btSocket.isInitialized && btSocket.isConnected)
+
+
 
 
     @SuppressLint("MissingPermission")
