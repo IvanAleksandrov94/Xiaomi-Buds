@@ -2,11 +2,15 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/My_Application.iml" filepath="$PROJECT_DIR$/.idea/modules/My_Application.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/My_Application.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/My_Application.app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/My_Application.app.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/My_Application.app.androidTest.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/My_Application.app.main.iml" filepath="$PROJECT_DIR$/.idea/modules/app/My_Application.app.main.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/My_Application.app.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/My_Application.app.unitTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/MyApplication.iml" filepath="$PROJECT_DIR$/.idea/modules/MyApplication.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/MyApplication.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/MyApplication.app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/MyApplication.app.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/MyApplication.app.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/MyApplication.app.main.iml" filepath="$PROJECT_DIR$/.idea/modules/app/MyApplication.app.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/MyApplication.app.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/MyApplication.app.unitTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/budswatch/MyApplication.budswatch.iml" filepath="$PROJECT_DIR$/.idea/modules/budswatch/MyApplication.budswatch.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/budswatch/MyApplication.budswatch.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/budswatch/MyApplication.budswatch.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/budswatch/MyApplication.budswatch.main.iml" filepath="$PROJECT_DIR$/.idea/modules/budswatch/MyApplication.budswatch.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/budswatch/MyApplication.budswatch.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/budswatch/MyApplication.budswatch.unitTest.iml" />
     </modules>
   </component>
 </project>

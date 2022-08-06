@@ -61,7 +61,11 @@ import android.media.AudioManager
 import android.media.AudioTrack
 import android.media.audiofx.Virtualizer
 import android.media.audiofx.Virtualizer.VIRTUALIZATION_MODE_BINAURAL
+import android.net.Uri
 import androidx.core.content.ContextCompat
+import com.google.android.gms.wearable.CapabilityClient
+import com.google.android.gms.wearable.Wearable
+import com.grapesapps.myapplication.vm.ClientDataViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -96,17 +100,10 @@ fun HeadsetScreen(
 
     val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-
-
-
     lateinit var btHeadset: BluetoothHeadset
 
-   val isActiveMusic = audioManager.isMusicActive
+    val isActiveMusic = audioManager.isMusicActive
     Log.e("MAIN", "is active Music $isActiveMusic")
-
-  // val aaa = audioManager.
-    //Log.e("MAIN", "SessionId $aaa")
-
 
 
 
@@ -123,9 +120,8 @@ fun HeadsetScreen(
 //                    )
 //                    connect.isAccessible = true
 //                    connect.invoke(proxy, btDevice)
-                  //  BluetoothAdapter.getDefaultAdapter().closeProfileProxy(profile, proxy)
+                    //  BluetoothAdapter.getDefaultAdapter().closeProfileProxy(profile, proxy)
                 }
-
 
 
             }
@@ -329,8 +325,6 @@ fun HeadsetScreen(
 //                                                        )
 
 
-
-
                                                     }
 
 
@@ -418,16 +412,16 @@ fun HeadsetScreen(
                                             ),
                                             onCheckedChange = {
                                                 viewModel.onSelectSpectralAudio()
-                                                if(mMediaPlayer.isPlaying){
+                                                if (mMediaPlayer.isPlaying) {
                                                     mMediaPlayer.stop()
                                                     mMediaPlayer.prepareAsync();
-                                                }else{
+                                                } else {
                                                     viewModel.onStartHeadTest()
                                                     mMediaPlayer.isLooping = false
                                                     mMediaPlayer.start()
                                                 }
-                                                 viewModel.onStartHeadTest()
-                                                  switchChecked = it
+                                                viewModel.onStartHeadTest()
+                                                switchChecked = it
                                             }
 
                                         )

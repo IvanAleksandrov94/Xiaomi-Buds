@@ -13,5 +13,16 @@ pluginManagement {
         }
     }
 }
-rootProject.name = "My Application"
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "MyApplication"
 include ':app'
+include ':budswatch'
