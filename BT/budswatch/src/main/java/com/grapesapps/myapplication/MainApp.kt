@@ -1,6 +1,10 @@
 package com.grapesapps.myapplication
 
 
+import android.content.Context
+import android.os.VibrationEffect
+import android.os.VibrationEffect.DEFAULT_AMPLITUDE
+import android.os.Vibrator
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -20,6 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.*
+import kotlinx.coroutines.launch
 
 @Composable
 fun MainApp(
@@ -28,16 +34,25 @@ fun MainApp(
     onQueryOtherDevicesClicked: () -> Unit,
     onQueryMobileCameraClicked: () -> Unit
 ) {
-    //  val scalingLazyListState = rememberScalingLazyListState()
-    var selectedNoiseSetting by remember { mutableStateOf(1) }
-//    var checked2 by remember { mutableStateOf(true) }
-//    var checked3 by remember { mutableStateOf(false) }
+    val context = LocalContext.current.applicationContext
+    lateinit var vibrator: Vibrator
+    var selectedNoiseSetting by remember { mutableStateOf(0) }
     var checkedChip by remember { mutableStateOf(false) }
     var selectedNoise by remember { mutableStateOf(1) }
     Log.e("SCREEN", "isScreenRound: $isScreenRound")
 
-    Scaffold(
 
+    LaunchedEffect(key1 = true, block = {
+        launch {
+            vibrator = context?.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+    })
+
+    fun vibrate() {
+        vibrator.vibrate(VibrationEffect.createWaveform(LongArray(100), DEFAULT_AMPLITUDE))
+    }
+
+    Scaffold(
         vignette = { Vignette(vignettePosition = VignettePosition.TopAndBottom) },
         timeText = { TimeText() }
     ) {
@@ -64,7 +79,7 @@ fun MainApp(
 
                     )
                 Text(
-                    text = "C:100% L: 100% R: 100%",
+                    text = "C:100% L: 100% R: ϟ100%",
                     fontSize = 8.sp
 
                 )
@@ -91,8 +106,10 @@ fun MainApp(
             ) {
                 when (selectedNoise) {
                     0 -> NoiseControl(
-                        value = 1,
-                        onCheckedChange = { }
+                        value = selectedNoiseSetting,
+                        onCheckedChange = {
+                            selectedNoiseSetting = it
+                        }
                     )
                     1 -> Text(
                         "Режимы отключены", fontSize = 8.sp,
@@ -116,6 +133,7 @@ fun MainApp(
                             },
                             enabled = true,
                             onCheckedChange = {
+                                vibrate()
                                 checkedChip = it
                             },
                             colors = ToggleChipDefaults.toggleChipColors(
@@ -378,42 +396,6 @@ fun NoiseControl(
         }
     }
 
-}
-
-@Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
-@Composable
-fun MainAppPreviewEvents() {
-    MainApp(
-        events = listOf(
-            Event(
-                title = R.string.data_item_changed,
-                text = "Event 1"
-            ),
-            Event(
-                title = R.string.data_item_deleted,
-                text = "Event 2"
-            ),
-            Event(
-                title = R.string.data_item_unknown,
-                text = "Event 3"
-            ),
-            Event(
-                title = R.string.message,
-                text = "Event 4"
-            ),
-            Event(
-                title = R.string.data_item_changed,
-                text = "Event 5"
-            ),
-            Event(
-                title = R.string.data_item_deleted,
-                text = "Event 6"
-            )
-        ),
-        isScreenRound = false,
-        onQueryOtherDevicesClicked = {},
-        onQueryMobileCameraClicked = {}
-    )
 }
 
 @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)

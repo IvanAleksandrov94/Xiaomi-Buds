@@ -1,0 +1,17 @@
+package com.grapesapps.myapplication.bluetooth
+
+class BluetoothUtils {
+    companion object {
+        const val ACTION_DISCOVERY_STARTED = "ACTION_DISCOVERY_STARTED"
+        const val ACTION_DISCOVERY_STOPPED = "ACTION_DISCOVERY_STOPPED"
+        const val ACTION_DEVICE_FOUND = "ACTION_DEVICE_FOUND"
+        const val ACTION_DEVICE_CONNECTED = "ACTION_DEVICE_CONNECTED"
+        const val ACTION_DEVICE_DISCONNECTED = "ACTION_DEVICE_DISCONNECTED"
+        const val ACTION_MESSAGE_RECEIVED = "ACTION_MESSAGE_RECEIVED"
+        const val ACTION_MESSAGE_SENT = "ACTION_MESSAGE_SENT"
+        const val ACTION_CONNECTION_ERROR = "ACTION_CONNECTION_ERROR"
+        const val ACTION_CONNECTION_NOT_FOUND = "ACTION_CONNECTION_NOT_FOUND"
+        const val EXTRA_DEVICE = "EXTRA_DEVICE"
+        const val EXTRA_MESSAGE = "EXTRA_MESSAGE"
+    }
+}

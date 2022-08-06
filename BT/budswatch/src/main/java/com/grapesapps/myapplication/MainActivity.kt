@@ -9,10 +9,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.wear.compose.material.Scaffold
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.Node
-import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async

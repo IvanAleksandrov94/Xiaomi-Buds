@@ -307,36 +307,26 @@ fun HeadsetScreen(
                                                 if (it) {
                                                     GlobalScope.launch(Dispatchers.IO) {
 
-                                                        btHeadset.sendVendorSpecificResultCode(
+                                                        val result = btHeadset.sendVendorSpecificResultCode(
                                                             btDevice,
                                                             "+XIAOMI",
                                                             "FF01020103020501FF"
                                                         )
-                                                        delay(150L)
-                                                        btHeadset.sendVendorSpecificResultCode(
-                                                            btDevice,
-                                                            "+XIAOMI",
-                                                            "FF010201020102FF"
-                                                        )
-//                                                        btHeadset.sendVendorSpecificResultCode(
-//                                                            btDevice,
-//                                                            "+XIAOMI",
-//                                                            "FF010201020101FF"
-//                                                        )
-
+                                                        Log.e("SelectSpectral", "Send result $result")
 
                                                     }
 
 
                                                 } else {
-                                                    btHeadset.sendVendorSpecificResultCode(
+                                                    val result = btHeadset.sendVendorSpecificResultCode(
                                                         btDevice,
                                                         "+XIAOMI",
                                                         "FF01020103020500FF"
                                                     )
+
+                                                    Log.e("SelectSpectral", "Send result $result")
                                                 }
                                                 switchChecked = it
-
                                                 //  viewModel.onSelectSpectralAudio()
                                                 // switchChecked = it
                                             }

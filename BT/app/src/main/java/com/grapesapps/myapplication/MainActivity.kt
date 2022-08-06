@@ -3,31 +3,37 @@
 package com.grapesapps.myapplication
 
 import android.Manifest
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.annotation.SuppressLint
+import android.bluetooth.BluetoothDevice
+import android.content.*
 import android.media.audiofx.*
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.material.Text
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavHostController
+import androidx.wear.compose.material.Scaffold
 import com.google.accompanist.navigation.animation.rememberAnimatedNavController
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
+import com.grapesapps.myapplication.bluetooth.BluetoothSDKListenerHelper
+import com.grapesapps.myapplication.bluetooth.BluetoothSDKService
+import com.grapesapps.myapplication.bluetooth.IBluetoothSDKListener
 import com.grapesapps.myapplication.model.SharedPrefManager
 import com.grapesapps.myapplication.view.navigation.Navigation
 import com.grapesapps.myapplication.vm.ClientDataViewModel
@@ -50,35 +56,12 @@ class MainActivity : ComponentActivity() {
     private val capabilityClient by lazy { Wearable.getCapabilityClient(this) }
     private val nodeClient by lazy { Wearable.getNodeClient(this) }
 
+    private lateinit var mService: BluetoothSDKService
 
-    @RequiresApi(Build.VERSION_CODES.O)
+
     @OptIn(ExperimentalUnsignedTypes::class, ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        var count = 0
-
-        GlobalScope.launch {
-           // lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                // Set the initial trigger such that the first count will happen in one second.
-                var lastTriggerTime = Instant.now() - (countInterval - Duration.ofSeconds(1))
-                while (isActive) {
-                    // Figure out how much time we still have to wait until our next desired trigger
-                    // point. This could be less than the count interval if sending the count took
-                    // some time.
-                    delay(
-                        Duration.between(Instant.now(), lastTriggerTime + countInterval).toMillis()
-                    )
-                    // Update when we are triggering sending the count
-                    lastTriggerTime = Instant.now()
-                    sendCount(count)
-
-                    // Increment the count to send next time
-                    count++
-                }
-          //  }
-        }
-
 
         dataClient.addListener(clientDataViewModel)
         messageClient.addListener(clientDataViewModel)
@@ -89,6 +72,19 @@ class MainActivity : ComponentActivity() {
         )
 
         Log.e("EVENTS", "${clientDataViewModel.events}")
+
+
+        val intent = Intent(this, BluetoothSDKService::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        intent.action = CHANNEL_START_ACTION
+        startService(intent)
+        bindBluetoothService()
+
+        BluetoothSDKListenerHelper.registerBluetoothSDKListener(this, mBluetoothListener)
+
+
+
+
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -102,6 +98,7 @@ class MainActivity : ComponentActivity() {
                     Manifest.permission.FOREGROUND_SERVICE,
                     Manifest.permission.RECEIVE_BOOT_COMPLETED,
                     Manifest.permission.WAKE_LOCK,
+                    Manifest.permission.SYSTEM_ALERT_WINDOW,
                 ),
                 1
             )
@@ -110,20 +107,13 @@ class MainActivity : ComponentActivity() {
         val btClassicReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
 
-                val sessionStates = arrayOf(
-                    AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION,
-                    AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION,
-                    AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL,
-                )
-
-                if (sessionStates.contains(intent.action)) {
-                    Log.d("BroadcastReceiver", "${intent.action}")
+                if (intent.action == AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION) {
                     val sessionID = intent.getIntExtra(AudioEffect.EXTRA_AUDIO_SESSION, AudioEffect.ERROR)
                     if (sessionID == -1 || sessionID == -3) {
                         Log.e("BroadcastReceiver", "ERROR")
                         return
                     }
-                    val mainEqualizer = Equalizer(100, sessionID)
+                    val mainEqualizer = Equalizer(0, sessionID)
 
                     val numberOfBands = mainEqualizer.numberOfBands
                     val bands = ArrayList<Int>(0)
@@ -135,7 +125,6 @@ class MainActivity : ComponentActivity() {
                         .map { mainEqualizer.getCenterFreq(it.toShort()) }
                         .mapTo(bands) { it.div(1000) }
                         .forEachIndexed { index, it ->
-                            Log.d("TAG", "Center frequency: $it Hz")
                             if (it < 100) {
                                 mainEqualizer.setBandLevel(
                                     index.toShort(),
@@ -158,10 +147,21 @@ class MainActivity : ComponentActivity() {
                             } else {
                                 mainEqualizer.setBandLevel(index.toShort(), 0)
                             }
-                            val level = mainEqualizer.getBandLevel(index.toShort())
-                            Log.e("LEVEL", "CURRENT LEVEL: $level")
                         }
                     mainEqualizer.enabled = true
+                    Log.d("BroadcastReceiver", "Equalizer is STARTED")
+
+                }
+                if (intent.action == AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION) {
+                    Log.d("BroadcastReceiver", "${intent.action}")
+                    val sessionID = intent.getIntExtra(AudioEffect.EXTRA_AUDIO_SESSION, AudioEffect.ERROR)
+                    if (sessionID == -1 || sessionID == -3) {
+                        Log.e("BroadcastReceiver", "ERROR")
+                        return
+                    }
+                    val mainEqualizer = Equalizer(0, sessionID)
+                    mainEqualizer.enabled = false
+                    Log.d("BroadcastReceiver", "Equalizer is STOPPED")
                 }
             }
         }
@@ -173,15 +173,114 @@ class MainActivity : ComponentActivity() {
         }
         registerReceiver(btClassicReceiver, intentFilter)
 
-        setContent {
-            pref = SharedPrefManager(LocalContext.current)
-            navController = rememberAnimatedNavController()
 
-            Navigation(
-                navController = navController,
+//        setContent {
+//            pref = SharedPrefManager(LocalContext.current)
+//            navController = rememberAnimatedNavController()
+//
+//            Navigation(
+//                navController = navController,
+//            )
+//        }
+    }
+
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            val binder = service as BluetoothSDKService.LocalBinder
+            mService = binder.getService()
+            print(mService)
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+
+        }
+    }
+
+    private fun bindBluetoothService() {
+        // Bind to LocalService
+        Intent(
+            this,
+            BluetoothSDKService::class.java
+        ).also { intent ->
+            this.bindService(
+                intent,
+                connection,
+                Context.BIND_AUTO_CREATE
             )
         }
     }
+
+    @OptIn(ExperimentalUnsignedTypes::class)
+    private val mBluetoothListener: IBluetoothSDKListener = object : IBluetoothSDKListener {
+        override fun onDiscoveryStarted() {
+            Log.e("IBluetoothSDKListener", "onDiscoveryStarted")
+            setContent {
+                Scaffold() {
+                    Text(text = "поиск наушников наушников")
+                }
+            }
+        }
+
+        override fun onDiscoveryStopped() {
+            Log.e("IBluetoothSDKListener", "onDiscoveryStopped")
+        }
+
+        override fun onDeviceDiscovered(device: BluetoothDevice?) {
+            Log.e("IBluetoothSDKListener", "onDeviceDiscovered")
+            setContent {
+                Scaffold() {
+                    Text(text = "до сих пор поиск наушников наушников")
+                }
+            }
+        }
+
+        override fun onDeviceConnected(device: BluetoothDevice?) {
+            Log.e("IBluetoothSDKListener", "onDeviceConnected")
+            setContent {
+                pref = SharedPrefManager(LocalContext.current)
+                navController = rememberAnimatedNavController()
+                Navigation(
+                    navController = navController,
+                )
+            }
+            // Do stuff when is connected
+        }
+
+        override fun onMessageReceived(device: BluetoothDevice?, message: String?) {
+            Log.e("IBluetoothSDKListener", "onMessageReceived: $message")
+        }
+
+        @SuppressLint("MissingPermission")
+        override fun onMessageSent(device: BluetoothDevice?) {
+            Log.e("IBluetoothSDKListener", "onMessageSent: ${device?.name}")
+        }
+
+        override fun onError(message: String?) {
+            Log.e("IBluetoothSDKListener", "onError: $message")
+        }
+
+        override fun onDeviceDisconnected() {
+            Log.e("IBluetoothSDKListener", "onDeviceDisconnected")
+            setContent {
+                Scaffold() {
+                    Text(text = "подключите наушники")
+
+                }
+            }
+        }
+
+        override fun onDeviceNotFound() {
+            Log.e("IBluetoothSDKListener", "onDeviceNotFound")
+            setContent {
+                Scaffold() {
+                    Text(text = "подключите наушники")
+
+                }
+            }
+        }
+
+    }
+
     private fun startWearableActivity() {
         lifecycleScope.launch {
             try {
@@ -203,24 +302,41 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
     private suspend fun sendCount(count: Int) {
         try {
-            val request = PutDataMapRequest.create(COUNT_PATH).apply {
-                dataMap.putInt(COUNT_KEY, count)
+            GlobalScope.launch {
+                val nodes = nodeClient.connectedNodes.await()
 
+                // Send a message to all nodes in parallel
+                nodes.map { node ->
+                    async {
+                        messageClient.sendMessage(node.id, COUNT_PATH, byteArrayOf())
+                            .await()
+                    }
+                }.awaitAll()
             }
-                .asPutDataRequest()
-                .setUrgent()
-
-            val result = dataClient.putDataItem(request).await()
-
-           // Log.d(TAG, "DataItem saved: $result")
+//            val request = PutDataMapRequest.create(COUNT_PATH).apply {
+//                dataMap.putInt(COUNT_KEY, count)
+//            }
+//                .asPutDataRequest()
+//                .setUrgent()
+//
+//            val result = dataClient.putDataItem(request).await()
+//
+//            Log.d(TAG, "DataItem saved: $result")
         } catch (cancellationException: CancellationException) {
             throw cancellationException
         } catch (exception: Exception) {
             Log.d(TAG, "Saving DataItem failed: $exception")
         }
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        BluetoothSDKListenerHelper.unregisterBluetoothSDKListener(applicationContext, mBluetoothListener)
+    }
+
     companion object {
         private const val TAG = "MainActivity"
 
@@ -231,9 +347,8 @@ class MainActivity : ComponentActivity() {
         private const val TIME_KEY = "time"
         private const val COUNT_KEY = "count"
         private const val CAMERA_CAPABILITY = "camera"
+        private const val CHANNEL_START_ACTION = "START_ACTION"
 
-        @RequiresApi(Build.VERSION_CODES.O)
-        private val countInterval = Duration.ofSeconds(5)
     }
 }
 

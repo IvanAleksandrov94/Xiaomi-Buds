@@ -195,7 +195,7 @@ class Home @Inject constructor(
                     if (tempBuffer.size == 25 && tempBuffer[6] == 0x11.toByte()) {
                         //  Log.i("VM Bluetooth", "!!!!!!!")
 //                        val parsed = tempBuffer.joinToString(" ") { "%02x".format(it) }
-                        Log.i("VM Bluetooth", "${tempBuffer.map { it.toByte() }}")
+                       // Log.i("VM Bluetooth", "${tempBuffer.map { it.toByte() }}")
                         val mutableList: MutableList<Byte> = tempBuffer.toMutableList()
 
                         val gyroConverted = gyroConvert(mutableList)
