@@ -1,22 +1,17 @@
+import android.app.ActivityManager
 import androidx.compose.animation.*
-import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.sp
-import androidx.navigation.NavBackStackEntry
+import androidx.core.content.ContextCompat.getSystemService
 import com.grapesapps.myapplication.HeadsetScreen
-import com.grapesapps.myapplication.ui.theme.BudsApplicationTheme
 import com.grapesapps.myapplication.view.navigation.Screen
 import com.grapesapps.myapplication.view.screens.SplashScreen
 import com.grapesapps.myapplication.vm.Home
 import com.grapesapps.myapplication.vm.Splash
 import dev.olshevski.navigation.reimagined.*
+
 
 //package com.grapesapps.myapplication.view.navigation
 //
@@ -221,18 +216,13 @@ import dev.olshevski.navigation.reimagined.*
 fun NavHostScreen(
     splashVm: Splash,
     headsetVm: Home,
-
     ) {
+
     val navController = rememberNavController<Screen>(
         startDestination = Screen.SplashScreen
     )
 
     NavBackHandler(navController)
-//
-//    val enterLaunchTransition: (AnimatedContentScope<NavBackStackEntry>.() -> EnterTransition?) =
-//        {
-//            fadeIn(tween(500))
-//        }
 
     AnimatedNavHost(controller = navController, transitionSpec = MainNavHostTransitionSpec) { screen ->
         when (screen) {

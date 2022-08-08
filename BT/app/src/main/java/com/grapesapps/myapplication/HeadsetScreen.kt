@@ -58,106 +58,106 @@ fun HeadsetScreen(
     viewModel: Home,
 ) {
     val context = LocalContext.current
-    val configuration = LocalConfiguration.current
-    val state: State<HomeState?> = viewModel.state.observeAsState()
-    val errorState: State<String?> = viewModel.errorState.observeAsState()
-    val scrollState = rememberLazyListState()
-    val scrollBehavior =
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberSplineBasedDecay(), rememberTopAppBarState())
-
-    var switchChecked by remember { mutableStateOf(false) }
-
-    val lifecycleStateObserver = LocalLifecycleOwner.current.lifecycle.observeAsState()
-    val lifecycleState = lifecycleStateObserver.value
-
-    val bluetoothManager: BluetoothManager = remember { context.getSystemService(BluetoothManager::class.java) }
-    val bluetoothAdapter: BluetoothAdapter? = remember { bluetoothManager.adapter }
-
-    val btDevice = bluetoothAdapter?.bondedDevices?.firstOrNull { it.name == "Xiaomi Buds 3T Pro" }
-
-    val mMediaPlayer = MediaPlayer.create(context, R.raw.xiaomi_sound)
-
-    val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-
-    lateinit var btHeadset: BluetoothHeadset
-
-    val isActiveMusic = audioManager.isMusicActive
-    Log.e("MAIN", "is active Music $isActiveMusic")
-
-
-
-    bluetoothManager.adapter?.getProfileProxy(
-        context, object : BluetoothProfile.ServiceListener {
-            override fun onServiceConnected(profile: Int, proxy: BluetoothProfile?) {
-                if (profile == BluetoothProfile.HEADSET) {
-                    val mCurrentHeadset = proxy as BluetoothHeadset
-                    btHeadset = mCurrentHeadset
-                    Log.i("MAIN", "BluetoothHeadset ПОДКЛЮЧЕН")
-//                    val connect = proxy.javaClass.getDeclaredMethod(
-//                        "connect",
-//                        BluetoothDevice::class.java
-//                    )
-//                    connect.isAccessible = true
-//                    connect.invoke(proxy, btDevice)
-                    //  BluetoothAdapter.getDefaultAdapter().closeProfileProxy(profile, proxy)
-                }
+//    val configuration = LocalConfiguration.current
+//    val state: State<HomeState?> = viewModel.state.observeAsState()
+//    val errorState: State<String?> = viewModel.errorState.observeAsState()
+//    val scrollState = rememberLazyListState()
+//    val scrollBehavior =
+//        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberSplineBasedDecay(), rememberTopAppBarState())
+//
+//    var switchChecked by remember { mutableStateOf(false) }
+//
+//    val lifecycleStateObserver = LocalLifecycleOwner.current.lifecycle.observeAsState()
+//    val lifecycleState = lifecycleStateObserver.value
+//
+//    val bluetoothManager: BluetoothManager = remember { context.getSystemService(BluetoothManager::class.java) }
+//    val bluetoothAdapter: BluetoothAdapter? = remember { bluetoothManager.adapter }
+//
+//    val btDevice = bluetoothAdapter?.bondedDevices?.firstOrNull { it.name == "Xiaomi Buds 3T Pro" }
+//
+//    val mMediaPlayer = MediaPlayer.create(context, R.raw.xiaomi_sound)
+//
+//    val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+//
+//    lateinit var btHeadset: BluetoothHeadset
+//
+//    val isActiveMusic = audioManager.isMusicActive
+//    Log.e("MAIN", "is active Music $isActiveMusic")
 
 
-            }
-
-
-            override fun onServiceDisconnected(profile: Int) {
-                if (profile == BluetoothProfile.HEADSET) {
-                    //btHeadset = null
-                    Log.i("MAIN", "BluetoothHeadset ОТКЛЮЧЕН")
-                }
-            }
-
-        }, BluetoothProfile.HEADSET
-    )
+//
+//    bluetoothManager.adapter?.getProfileProxy(
+//        context, object : BluetoothProfile.ServiceListener {
+//            override fun onServiceConnected(profile: Int, proxy: BluetoothProfile?) {
+//                if (profile == BluetoothProfile.HEADSET) {
+//                    val mCurrentHeadset = proxy as BluetoothHeadset
+//                    btHeadset = mCurrentHeadset
+//                    Log.i("MAIN", "BluetoothHeadset ПОДКЛЮЧЕН")
+////                    val connect = proxy.javaClass.getDeclaredMethod(
+////                        "connect",
+////                        BluetoothDevice::class.java
+////                    )
+////                    connect.isAccessible = true
+////                    connect.invoke(proxy, btDevice)
+//                    //  BluetoothAdapter.getDefaultAdapter().closeProfileProxy(profile, proxy)
+//                }
+//
+//
+//            }
+//
+//
+//            override fun onServiceDisconnected(profile: Int) {
+//                if (profile == BluetoothProfile.HEADSET) {
+//                    //btHeadset = null
+//                    Log.i("MAIN", "BluetoothHeadset ОТКЛЮЧЕН")
+//                }
+//            }
+//
+//        }, BluetoothProfile.HEADSET
+//    )
 
 
 
     LaunchedEffect(key1 = viewModel, block = {
         launch {
-            if (btDevice != null) {
-                viewModel.connectDevice(btDevice, audio = audioManager)
-            } else {
-                viewModel.searchDevices()
-            }
+//            if (btDevice != null) {
+//                viewModel.connectDevice(btDevice, audio = audioManager)
+//            } else {
+//                viewModel.searchDevices()
+//            }
         }
     })
 
-
-
-
-
-
-    LaunchedEffect(key1 = lifecycleState) {
-        when (lifecycleState) {
-            Lifecycle.Event.ON_RESUME -> {
-                if (btDevice != null) {
-                    viewModel.connectDevice(btDevice, audioManager)
-                }
-            }
-            Lifecycle.Event.ON_CREATE -> {
-                print("!!")
-            }
-            Lifecycle.Event.ON_START -> {
-                print("!!")
-
-            }
-            Lifecycle.Event.ON_PAUSE -> {
-                print("!!")
-            }
-            else -> Unit
-        }
-    }
-
-    when (errorState.value != null) {
-        true -> Toast.makeText(context, errorState.value, Toast.LENGTH_SHORT).show()
-        else -> Unit
-    }
+//
+//
+//
+//
+//
+//    LaunchedEffect(key1 = lifecycleState) {
+//        when (lifecycleState) {
+//            Lifecycle.Event.ON_RESUME -> {
+//                if (btDevice != null) {
+//                    viewModel.connectDevice(btDevice, audioManager)
+//                }
+//            }
+//            Lifecycle.Event.ON_CREATE -> {
+//                print("!!")
+//            }
+//            Lifecycle.Event.ON_START -> {
+//                print("!!")
+//
+//            }
+//            Lifecycle.Event.ON_PAUSE -> {
+//                print("!!")
+//            }
+//            else -> Unit
+//        }
+//    }
+//
+//    when (errorState.value != null) {
+//        true -> Toast.makeText(context, errorState.value, Toast.LENGTH_SHORT).show()
+//        else -> Unit
+//    }
     BudsApplicationTheme {
         Scaffold(
             content = { contentPadding ->

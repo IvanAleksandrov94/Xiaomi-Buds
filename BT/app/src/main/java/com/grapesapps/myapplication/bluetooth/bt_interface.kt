@@ -12,6 +12,8 @@ interface IBluetoothSDKListener {
      */
     fun onBluetoothDisabled()
 
+    fun onBluetoothInitial()
+
     /**
      * from action BluetoothUtils.ACTION_DISCOVERY_STARTED
      */
@@ -30,7 +32,7 @@ interface IBluetoothSDKListener {
     /**
      * from action BluetoothUtils.ACTION_DEVICE_CONNECTED
      */
-    fun onDeviceConnected(device: BluetoothDevice?)
+    fun onDeviceConnected(device: BluetoothDevice?, message: String)
 
     /**
      * from action BluetoothUtils.ACTION_MESSAGE_RECEIVED

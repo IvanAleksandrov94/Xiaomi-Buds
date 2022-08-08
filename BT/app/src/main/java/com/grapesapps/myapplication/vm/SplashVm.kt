@@ -15,19 +15,23 @@ import kotlinx.coroutines.launch
 
 sealed class SplashState {
     object SplashStateInitial : SplashState()
+    object SplashStateIdle : SplashState()
     object SplashBluetoothDisabled : SplashState()
     object SplashDeviceNotFound : SplashState()
     object SplashReceiverStartSearch : SplashState()
     object SplashReceiverEndSearch : SplashState()
-    object SplashSuccessConnected : SplashState()
+    class SplashSuccessConnected(
+        val deviceName: String
+    ) : SplashState()
+
     object SplashSuccessNavigate : SplashState()
 }
 
 class Splash : ViewModel() {
-    private val viewState: MutableLiveData<SplashState> =
+    private val viewState: MutableLiveData<SplashState?> =
         MutableLiveData(SplashState.SplashStateInitial)
 
-    val viewStateSplash: LiveData<SplashState> = viewState
+    val viewStateSplash: LiveData<SplashState?> = viewState
 
     private val mBinder: MutableLiveData<BluetoothSDKService> = MutableLiveData<BluetoothSDKService>()
 
@@ -36,7 +40,7 @@ class Splash : ViewModel() {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             val binder = service as BluetoothSDKService.LocalBinder
             mBinder.value = binder.getService()
-            if (!binder.isNotConnected()) {
+            if (!binder.isNotConnectedSocket()) {
                 viewState.postValue(SplashState.SplashSuccessNavigate)
             }
         }
@@ -49,8 +53,9 @@ class Splash : ViewModel() {
 
     fun getServiceConnection(): ServiceConnection = serviceConnection
 
-
-    fun getCheckBluetoothStatus() = mBinder.value?.LocalBinder()?.isEnabledBluetooth() ?: false
+    fun load() {
+        viewState.postValue(SplashState.SplashStateIdle)
+    }
 
 
     fun onDeviceNotFound() = viewState.postValue(SplashState.SplashDeviceNotFound)
@@ -59,14 +64,14 @@ class Splash : ViewModel() {
 
     fun onBluetoothEnabled() {
         mBinder.value?.LocalBinder()?.startSearchReceiver()
-        mBinder.value?.LocalBinder()?.connectDevice()
-        viewState.postValue(SplashState.SplashStateInitial)
+//        mBinder.value?.LocalBinder()?.connectDevice()
+        viewState.postValue(SplashState.SplashReceiverStartSearch)
     }
 
 
-    fun onDeviceConnected() {
+    fun onDeviceConnected(deviceName: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            viewState.postValue(SplashState.SplashSuccessConnected)
+            viewState.postValue(SplashState.SplashSuccessConnected(deviceName = deviceName))
             delay(2000L)
             viewState.postValue(SplashState.SplashSuccessNavigate)
         }
@@ -80,7 +85,7 @@ class Splash : ViewModel() {
 
     fun onEndSearchReceiver() {
         if (viewStateSplash.value !is SplashState.SplashSuccessConnected) {
-            val isNotExist = mBinder.value?.LocalBinder()?.isNotConnected() ?: true
+            val isNotExist = mBinder.value?.LocalBinder()?.isNotConnectedSocket() ?: true
             if (isNotExist) {
                 viewState.postValue(SplashState.SplashReceiverEndSearch)
             }

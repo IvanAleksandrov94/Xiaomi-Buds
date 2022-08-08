@@ -84,6 +84,7 @@ class BluetoothSDKService : Service() {
         btDevice = btAdapter.bondedDevices?.firstOrNull { it.name == "Xiaomi Buds 3T Pro" }
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         context = this
+
         Log.e("BT_SERVICE", "IS CREATE")
     }
 
@@ -105,11 +106,32 @@ class BluetoothSDKService : Service() {
             return START_STICKY
         }
 
+        val d = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)
+        for (i in d) {
+            if (i.productName == "Xiaomi Buds 3T Pro") {
+                pushBroadcastMessage(
+                    BluetoothUtils.ACTION_DEVICE_CONNECTED,
+                    null,
+                    "${i.productName}"
+                )
+            }
+        }
 
-        startSystemBluetoothStateReceiver()
-
-
-        connectDevice(btDevice)
+        if (!btAdapter.isEnabled) {
+            pushBroadcastMessage(
+                BluetoothUtils.ACTION_BT_OFF,
+                null,
+                "ACTION_BT_OFF"
+            )
+            startSystemBluetoothStateReceiver()
+        } else {
+            pushBroadcastMessage(
+                BluetoothUtils.ACTION_DEVICE_INITIAL,
+                null,
+                "a"
+            )
+            connectDevice(btDevice)
+        }
 
         Log.e("BT_SERVICE", "IS STARTED")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -170,17 +192,12 @@ class BluetoothSDKService : Service() {
 
             }
         }
-
-
         return START_STICKY
-
     }
-
 
     @SuppressLint("MissingPermission")
     fun connectDevice(device: BluetoothDevice?) {
         scopeService.launch(Dispatchers.IO) {
-
             if (device == null) {
                 pushBroadcastMessage(
                     BluetoothUtils.ACTION_DEVICE_NOT_FOUND,
@@ -189,6 +206,7 @@ class BluetoothSDKService : Service() {
                 )
                 return@launch
             }
+            binder.startDiscovery()
             var i = 0
             do {
                 try {
@@ -197,30 +215,23 @@ class BluetoothSDKService : Service() {
                     if (isConnected) {
                         btSocket?.close()
                     }
-
                     IOBluetoothService(btSocket!!).connect()
+                    binder.stopDiscovery()
                     pushBroadcastMessage(
                         BluetoothUtils.ACTION_DEVICE_CONNECTED,
-                        null,
-                        "CONNECTED"
+                        device,
+                        device.name
                     )
                     Log.i(TAG, "${device.name} (${device.address}) is connected")
                     break
 
                 } catch (e: IOException) {
-                    try {
-//                        if (socket.isConnected) {
-//                            socket.close()
-//                        }
-                        Log.i(TAG, "$${device.name} (${device.address}) is reconnected")
-                    } catch (e: IOException) {
-                        Log.e(TAG, "$${device.name} (${device.address}): reconnect Error $e")
-                    }
                     Log.e(TAG, "$${device.name} (${device.address}): BT Connect Error $e")
                 }
                 i++
-                delay(300L)
-            } while (i < 10)
+                delay(100L)
+            } while (i < 2)
+
         }
     }
 
@@ -277,9 +288,8 @@ class BluetoothSDKService : Service() {
 
                             val mutableTempBuffer: MutableList<Byte> = tempBuffer.toMutableList()
 
-                            val gyroConverted = gyroConvert(mutableTempBuffer)
-                            val parameter = convertSendGyroData(gyroConverted)
-                            if (parameter != null) audioManager.setParameters(parameter)
+                            val parameters = gyroConvert(mutableTempBuffer)
+                            if (parameters != null) audioManager.setParameters(parameters)
 
 
                             val last = mutableTempBuffer[24]
@@ -497,25 +507,15 @@ class BluetoothSDKService : Service() {
             return this@BluetoothSDKService
         }
 
-        fun isNotConnected(): Boolean {
+        fun isNotConnectedSocket(): Boolean {
             val isConnected = btSocket?.isConnected ?: false
             return btSocket == null || !isConnected
         }
-
 
         fun startSearchReceiver() = binder.startDiscovery()
 
         fun connectDevice() = connectDevice(btDevice)
 
-        fun isEnabledBluetooth() {
-            if (!btAdapter.isEnabled) {
-                pushBroadcastMessage(
-                    BluetoothUtils.ACTION_BT_OFF,
-                    null,
-                    "ACTION_BT_OFF"
-                )
-            }
-        }
 
         fun send() {
             Log.e("!@#", "TESTY")
@@ -610,7 +610,7 @@ class BluetoothSDKService : Service() {
             intent.putExtra(BluetoothUtils.EXTRA_MESSAGE, message)
         }
 
-        LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
 
     }
 
@@ -639,13 +639,13 @@ class BluetoothSDKService : Service() {
             "+XIAOMI",
             "FF010201020101FF"
         )
-        if (result == true) {
-            pushBroadcastMessage(
-                BluetoothUtils.ACTION_DEVICE_CONNECTED,
-                null,
-                "CONNECTED"
-            )
-        }
+//        if (result == true) {
+//            pushBroadcastMessage(
+//                BluetoothUtils.ACTION_DEVICE_CONNECTED,
+//                null,
+//                "CONNECTED"
+//            )
+//        }
         Log.e(TAG, "Bluetooth Headset: CONNECTED RESULT CONNECT $result")
 
     }
@@ -675,15 +675,7 @@ class BluetoothSDKService : Service() {
         return HeadsetBatteryStatus("$p%")
     }
 
-    private fun convertSendGyroData(gyroData: HeadsetGyro): String? {
-        if ((gyroData.yaw < 360 || gyroData.yaw > -360) || (gyroData.pitch < 360 || gyroData.pitch > -360) || (gyroData.row < 360 || gyroData.row > -360)) {
-            // Log.e(TAG, "SEND GYRO: yaw:${gyroData.yaw}, pitch:${gyroData.pitch}, row:${gyroData.row} ")
-            return "pitch=${gyroData.pitch};row=${gyroData.row};yaw=${gyroData.yaw}"
-        }
-        return null
-    }
-
-    private fun gyroConvert(gyroData: MutableList<Byte>): HeadsetGyro {
+    private fun gyroConvert(gyroData: MutableList<Byte>): String? {
         val yaw = gyroData.slice(12..15).map { "%02x".format(it) }.asReversed().joinToString(separator = "")
         val pitch = gyroData.slice(16..19).map { "%02x".format(it) }.asReversed().joinToString(separator = "")
         val row = gyroData.slice(20..23).map { "%02x".format(it) }.asReversed().joinToString(separator = "")
@@ -692,7 +684,12 @@ class BluetoothSDKService : Service() {
         val pitchConverted = gyroConvertPosition(pitch)
         val rowConverted = gyroConvertPosition(row)
 
-        return HeadsetGyro(yawConverted, pitchConverted, rowConverted)
+        if ((yawConverted < 360 || yawConverted > -360) || (pitchConverted < 360 || pitchConverted > -360) || (rowConverted < 360 || rowConverted > -360)) {
+            // Log.e(TAG, "SEND GYRO: yaw:${gyroData.yaw}, pitch:${gyroData.pitch}, row:${gyroData.row} ")
+            return "pitch=$pitchConverted;row=rowConverted;yaw=$yawConverted"
+        }
+
+        return null
     }
 
     private fun gyroConvertPosition(position: String?): Float {

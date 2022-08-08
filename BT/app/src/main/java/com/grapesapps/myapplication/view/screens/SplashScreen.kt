@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothDevice
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Message
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -44,10 +45,12 @@ import com.grapesapps.myapplication.vm.HomeState
 import com.grapesapps.myapplication.vm.Splash
 import com.grapesapps.myapplication.vm.SplashState
 import dev.olshevski.navigation.reimagined.NavController
+import dev.olshevski.navigation.reimagined.navigate
 import kotlinx.coroutines.*
+import okhttp3.internal.wait
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SplashScreen(
     viewModel: Splash,
@@ -71,71 +74,72 @@ fun SplashScreen(
             )
         }
     }
-
-    val mBluetoothListener: IBluetoothSDKListener = object : IBluetoothSDKListener {
-
-        override fun onDiscoveryStarted() {
-            Log.e("IBluetoothSDKListener", "onDiscoveryStarted")
-        }
-
-        override fun onDiscoveryStopped() {
-            viewModel.onEndSearchReceiver()
-            Log.e("IBluetoothSDKListener", "onDiscoveryStopped")
-        }
-
-        override fun onDeviceDiscovered(device: BluetoothDevice?) {
-            Log.e("IBluetoothSDKListener", "onDeviceDiscovered")
-
-        }
-
-        override fun onDeviceConnected(device: BluetoothDevice?) {
-            Log.e("IBluetoothSDKListener", "onDeviceConnected")
-            viewModel.onDeviceConnected()
-        }
-
-        override fun onMessageReceived(device: BluetoothDevice?, message: String?) {
-            Log.e("IBluetoothSDKListener", "onMessageReceived: $message")
-        }
-
-        @SuppressLint("MissingPermission")
-        override fun onMessageSent(device: BluetoothDevice?) {
-            Log.e("IBluetoothSDKListener", "onMessageSent: ${device?.name}")
-        }
-
-        override fun onError(message: String?) {
-            Log.e("IBluetoothSDKListener", "onError: $message")
-        }
-
-        override fun onDeviceDisconnected() {
-            Log.e("IBluetoothSDKListener", "onDeviceDisconnected")
-
-        }
-
-        override fun onDeviceNotFound() {
-            viewModel.onDeviceNotFound()
-            Log.e("IBluetoothSDKListener", "onDeviceNotFound")
-        }
-
-        override fun onBluetoothDisabled() {
-            viewModel.onBluetoothDisabled()
-            Log.e("IBluetoothSDKListener", "onBluetoothDisabled")
-        }
-
-        override fun onBluetoothEnabled() {
-            viewModel.onBluetoothEnabled()
-            Log.e("IBluetoothSDKListener", "onBluetoothEnabled")
-        }
-
-
-    }
+//
+//    val mBluetoothListener: IBluetoothSDKListener = object : IBluetoothSDKListener {
+//
+//        override fun onDiscoveryStarted() {
+//            Log.e("IBluetoothSDKListener", "onDiscoveryStarted")
+//        }
+//
+//        override fun onDiscoveryStopped() {
+//            viewModel.onEndSearchReceiver()
+//            Log.e("IBluetoothSDKListener", "onDiscoveryStopped")
+//        }
+//
+//        override fun onDeviceDiscovered(device: BluetoothDevice?) {
+//            Log.e("IBluetoothSDKListener", "onDeviceDiscovered")
+//
+//        }
+//
+//        override fun onDeviceConnected(device: BluetoothDevice?, message: String) {
+//            Log.e("IBluetoothSDKListener", "onDeviceConnected $message")
+//            viewModel.onDeviceConnected(message)
+//        }
+//
+//        override fun onMessageReceived(device: BluetoothDevice?, message: String?) {
+//            Log.e("IBluetoothSDKListener", "onMessageReceived: $message")
+//        }
+//
+//        @SuppressLint("MissingPermission")
+//        override fun onMessageSent(device: BluetoothDevice?) {
+//            Log.e("IBluetoothSDKListener", "onMessageSent: ${device?.name}")
+//        }
+//
+//        override fun onError(message: String?) {
+//            Log.e("IBluetoothSDKListener", "onError: $message")
+//        }
+//
+//        override fun onDeviceDisconnected() {
+//            Log.e("IBluetoothSDKListener", "onDeviceDisconnected")
+//
+//        }
+//
+//        override fun onDeviceNotFound() {
+//            viewModel.onDeviceNotFound()
+//            Log.e("IBluetoothSDKListener", "onDeviceNotFound")
+//        }
+//
+//        override fun onBluetoothDisabled() {
+//            viewModel.onBluetoothDisabled()
+//            Log.e("IBluetoothSDKListener", "onBluetoothDisabled")
+//        }
+//
+//        override fun onBluetoothInitial() {
+//            viewModel.load()
+//        }
+//
+//        override fun onBluetoothEnabled() {
+//            viewModel.onBluetoothEnabled()
+//            Log.e("IBluetoothSDKListener", "onBluetoothEnabled")
+//        }
+//    }
 
     LaunchedEffect(
         key1 = viewModel,
         block = {
             launch {
                 bindBluetoothService()
-                BluetoothSDKListenerHelper.registerBluetoothSDKListener(context, mBluetoothListener)
-                viewModel.getCheckBluetoothStatus()
+             //   BluetoothSDKListenerHelper.registerBluetoothSDKListener(context, mBluetoothListener)
             }
         }
     )
@@ -166,8 +170,14 @@ fun SplashScreen(
         onDispose {
             val connection = viewModel.getServiceConnection()
             context.unbindService(connection);
-            BluetoothSDKListenerHelper.unregisterBluetoothSDKListener(context, mBluetoothListener)
+           // BluetoothSDKListenerHelper.unregisterBluetoothSDKListener(context, mBluetoothListener)
         }
+    }
+    when (val s = state.value) {
+        is SplashState.SplashSuccessNavigate -> {
+            navController.navigate(Screen.HomeScreen)
+        }
+        else -> {}
     }
 
     val stateMainText = remember {
@@ -183,46 +193,12 @@ fun SplashScreen(
     }
 
 //    var stateSearch by remember { mutableStateOf(true) }
-    var stateOpenBluetoothText by remember { mutableStateOf(false) }
-    var stateAnim by remember { mutableStateOf(true) }
-    when (state.value) {
-        is SplashState.SplashBluetoothDisabled -> {
-            stateSearch.targetState = false
-            stateOpenBluetoothText = true
-            stateAnim = true
-        }
-        is SplashState.SplashStateInitial -> {
-            stateOpenBluetoothText = false
-            stateAnim = false
-
-        }
-        is SplashState.SplashReceiverStartSearch -> {
-            stateSearch.targetState = false
-            stateOpenBluetoothText = false
-            stateAnim = true
-        }
-        is SplashState.SplashReceiverEndSearch -> {
-            stateSearch.targetState = false
-            stateOpenBluetoothText = true
-            stateAnim = true
-        }
-        is SplashState.SplashDeviceNotFound -> {
-            stateSearch.targetState = false
-            stateOpenBluetoothText = true
-            stateAnim = true
-        }
-        is SplashState.SplashSuccessConnected -> {
-            stateSearch.targetState = false
-            stateOpenBluetoothText = false
-            stateAnim = false
-        }
-        else -> {
-            stateSearch.targetState = false
-            stateOpenBluetoothText = true
-            stateAnim = true
+    val stateOpenBluetoothText  = remember {
+        MutableTransitionState(false).apply {
+            targetState = true
         }
     }
-
+    var stateAnim by remember { mutableStateOf(true) }
 
 
     BudsApplicationTheme {
@@ -238,7 +214,7 @@ fun SplashScreen(
                     ) {
 
                         Spacer(modifier = Modifier.padding(top = 100.dp))
-                        when (state.value) {
+                        when (val splashState = state.value) {
                             is SplashState.SplashBluetoothDisabled -> {
                                 AnimatedVisibility(
                                     visibleState = stateMainText,
@@ -246,19 +222,70 @@ fun SplashScreen(
                                     exit = fadeOut(animationSpec = tween(durationMillis = 1))
                                 ) {
                                     Text(
-                                        text = "Включите блютуз",
+                                        text = "Включите Bluetooth",
                                         fontSize = 30.sp,
                                         modifier = Modifier.padding(bottom = 35.dp)
                                     )
                                 }
                             }
                             is SplashState.SplashSuccessConnected -> {
-
+                                AnimatedVisibility(
+                                    visibleState = stateMainText,
+                                    enter = fadeIn(animationSpec = tween(durationMillis = 3000)),
+                                    exit = fadeOut(animationSpec = tween(durationMillis = 1))
+                                ) {
+                                    Text(
+                                        text = splashState.deviceName,
+                                        fontSize = 30.sp,
+                                        modifier = Modifier.padding(bottom = 35.dp)
+                                    )
+                                }
+                            }
+                            is SplashState.SplashReceiverStartSearch -> {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+//                                    AnimatedVisibility(
+//                                        visibleState = stateMainText,
+//                                        enter = fadeIn(animationSpec = tween(durationMillis = 2000)),
+//                                        exit = fadeOut(animationSpec = tween(durationMillis = 1))
+//                                    ) {
+                                    Text(
+                                        text = "Подключите наушники",
+                                        fontSize = 30.sp,
+                                        modifier = Modifier.padding(bottom = 35.dp)
+                                    )
+                                    //}
+                                    LoadingIndicator(
+                                        animating = true,
+                                        modifier = Modifier.graphicsLayer { alpha = if (stateAnim) 1f else 0f },
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        indicatorSpacing = 5.dp,
+                                        animationType = AnimationType.Bounce,
+                                    )
+                                }
+                            }
+                            is SplashState.SplashStateInitial -> {
+//                                Column(
+//                                    horizontalAlignment = Alignment.CenterHorizontally
+//                                ) {
+//                                    AnimatedVisibility(
+//                                        visibleState = stateMainText,
+//                                        enter = fadeIn(animationSpec = tween(durationMillis = 2000)),
+//                                        exit = fadeOut(animationSpec = tween(durationMillis = 1))
+//                                    ) {
+//                                        Text(
+//                                            text = "Подключите наушники",
+//                                            fontSize = 30.sp,
+//                                            modifier = Modifier.padding(bottom = 35.dp)
+//                                        )
+//                                    }
+//                                }
                             }
                             is SplashState.SplashSuccessNavigate -> {
 
                             }
-                            else -> {
+                            is SplashState.SplashStateIdle -> {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
@@ -273,79 +300,116 @@ fun SplashScreen(
                                             modifier = Modifier.padding(bottom = 35.dp)
                                         )
                                     }
-
-                                    LoadingIndicator(
-                                        animating = true,
-                                        modifier = Modifier.graphicsLayer { alpha = if (stateAnim) 1f else 0f },
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        indicatorSpacing = 5.dp,
-                                        animationType = AnimationType.Bounce,
-                                    )
                                 }
                             }
+                            else -> {
+//                                Text(
+//                                    text = "Подключите наушники",
+//                                    fontSize = 30.sp,
+//                                    modifier = Modifier.padding(bottom = 35.dp)
+//                                )
+                            }
                         }
+
+                        Log.e("STATE", "${state.value}" )
 
                         Column(
                             Modifier.height(100.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            AnimatedVisibility(
-                                visibleState = stateSearch,
-                                enter = fadeIn(animationSpec = tween(durationMillis = 3000)),
-                                exit = fadeOut(animationSpec = tween(durationMillis = 1))
-                            ) {
-                                Text(
-                                    text = "Найти наушники?",
-                                    fontSize = 18.sp,
-                                    modifier = Modifier
-                                        .padding(bottom = 35.dp, start = 5.dp, end = 5.dp, top = 5.dp)
-                                        .clickable(
-                                            interactionSource = MutableInteractionSource(),
-                                            indication = null,
-                                            onClick = {
-                                                stateSearch.targetState = false
-                                                stateAnim = true
-                                                viewModel.startSearchReceiver()
-                                            }
-                                        )
-                                )
-                            }
-                            AnimatedVisibility(
-                                visible = !stateSearch.targetState && !stateOpenBluetoothText,
-                                enter = fadeIn(animationSpec = tween(durationMillis = 2000), initialAlpha = 0f),
-                                exit = fadeOut(animationSpec = tween(durationMillis = 2000), targetAlpha = 0f)
-                            ) {
-                                Text(
-                                    text = "Идет поиск...",
-                                    fontSize = 18.sp,
-                                    modifier = Modifier
-                                        .padding(bottom = 35.dp, start = 5.dp, end = 5.dp, top = 5.dp)
-
-                                )
-                            }
-                            AnimatedVisibility(
-                                visible = stateOpenBluetoothText,
-                                enter = fadeIn(animationSpec = tween(durationMillis = 2000), initialAlpha = 0f),
-                                exit = fadeOut(animationSpec = tween(durationMillis = 2000), targetAlpha = 0f)
-                            ) {
-                                Text(
-                                    text = "Открыть настройки Bluetooth",
-                                    fontSize = 18.sp,
-                                    modifier = Modifier
-                                        .padding(bottom = 35.dp, start = 5.dp, end = 5.dp, top = 5.dp)
-                                        .clickable(
-                                            interactionSource = MutableInteractionSource(),
-                                            indication = null,
-                                            onClick = {
-                                                startActivity(
-                                                    context,
-                                                    Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS),
-                                                    Bundle()
+                            when (state.value) {
+                                is SplashState.SplashBluetoothDisabled -> {
+                                    AnimatedVisibility(
+                                        visibleState = stateOpenBluetoothText,
+                                        enter = fadeIn(animationSpec = tween(durationMillis = 2000)),
+                                        exit = fadeOut(animationSpec = tween(durationMillis = 1))
+                                    ) {
+                                        Text(
+                                            text = "Открыть настройки Bluetooth",
+                                            fontSize = 18.sp,
+                                            modifier = Modifier
+                                                .padding(bottom = 35.dp, start = 5.dp, end = 5.dp, top = 5.dp)
+                                                .clickable(
+                                                    interactionSource = MutableInteractionSource(),
+                                                    indication = null,
+                                                    onClick = {
+                                                        startActivity(
+                                                            context,
+                                                            Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS),
+                                                            Bundle()
+                                                        )
+                                                    }
                                                 )
-                                            }
                                         )
+                                    }
+                                }
+                                is SplashState.SplashStateInitial -> {
+                                    Text(text = "")
+//                                    AnimatedVisibility(
+//                                        visibleState = stateSearch,
+//                                        enter = fadeIn(animationSpec = tween(durationMillis = 3000)),
+//                                        exit = fadeOut(animationSpec = tween(durationMillis = 1))
+//                                    ) {
+//                                        Text(
+//                                            text = "Найти наушники?",
+//                                            fontSize = 18.sp,
+//                                            modifier = Modifier
+//                                                .padding(bottom = 35.dp, start = 5.dp, end = 5.dp, top = 5.dp)
+//                                                .clickable(
+//                                                    interactionSource = MutableInteractionSource(),
+//                                                    indication = null,
+//                                                    onClick = {
+//                                                        stateSearch.targetState = false
+//                                                        stateAnim = true
+//                                                        viewModel.startSearchReceiver()
+//                                                    }
+//                                                )
+//                                        )
+//                                    }
+                                }
+                                is SplashState.SplashReceiverStartSearch -> {
+                                    AnimatedVisibility(
+                                        visible = !stateSearch.targetState && !stateOpenBluetoothText.targetState,
+                                        enter = fadeIn(animationSpec = tween(durationMillis = 2000), initialAlpha = 0f),
+                                        exit = fadeOut(animationSpec = tween(durationMillis = 2000), targetAlpha = 0f)
+                                    ) {
+                                        Text(
+                                            text = "Идет поиск...",
+                                            fontSize = 18.sp,
+                                            modifier = Modifier
+                                                .padding(bottom = 35.dp, start = 5.dp, end = 5.dp, top = 5.dp)
 
-                                )
+                                        )
+                                    }
+                                }
+                                is SplashState.SplashSuccessNavigate -> {
+
+                                }
+                                is SplashState.SplashStateIdle -> {
+                                    AnimatedVisibility(
+                                        visibleState = stateSearch,
+                                        enter = fadeIn(animationSpec = tween(durationMillis = 3000)),
+                                        exit = fadeOut(animationSpec = tween(durationMillis = 1))
+                                    ) {
+                                        Text(
+                                            text = "Найти наушники?",
+                                            fontSize = 18.sp,
+                                            modifier = Modifier
+                                                .padding(bottom = 35.dp, start = 5.dp, end = 5.dp, top = 5.dp)
+                                                .clickable(
+                                                    interactionSource = MutableInteractionSource(),
+                                                    indication = null,
+                                                    onClick = {
+                                                        stateSearch.targetState = false
+                                                        stateAnim = true
+                                                        viewModel.startSearchReceiver()
+                                                    }
+                                                )
+                                        )
+                                    }
+                                }
+                                else -> {
+                                }
                             }
                         }
                     }

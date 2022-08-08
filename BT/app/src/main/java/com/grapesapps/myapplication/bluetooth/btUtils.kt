@@ -4,6 +4,7 @@ class BluetoothUtils {
     companion object {
         const val ACTION_BT_ON = "ACTION_BT_ON"
         const val ACTION_BT_OFF = "ACTION_BT_OFF"
+        const val ACTION_DEVICE_INITIAL = "ACTION_DEVICE_INITIAL"
         const val ACTION_DISCOVERY_STARTED = "ACTION_DISCOVERY_STARTED"
         const val ACTION_DISCOVERY_STOPPED = "ACTION_DISCOVERY_STOPPED"
         const val ACTION_DEVICE_NOT_FOUND = "ACTION_DEVICE_NOT_FOUND"

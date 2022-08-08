@@ -1,8 +1,17 @@
 package com.grapesapps.myapplication
+//import com.google.accompanist.navigation.animation.rememberAnimatedNavController
+//import com.grapesapps.myapplication.view.navigation.Navigation
 import NavHostScreen
 import android.Manifest
-import android.content.*
-import android.media.audiofx.*
+import android.annotation.SuppressLint
+import android.app.ActivityManager
+import android.bluetooth.BluetoothDevice
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.media.audiofx.AudioEffect
+import android.media.audiofx.Equalizer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -10,41 +19,32 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.NavHostController
-//import com.google.accompanist.navigation.animation.rememberAnimatedNavController
 import com.google.android.gms.wearable.CapabilityClient
 import com.google.android.gms.wearable.Wearable
+import com.grapesapps.myapplication.bluetooth.BluetoothSDKListenerHelper
 import com.grapesapps.myapplication.bluetooth.BluetoothSDKService
+import com.grapesapps.myapplication.bluetooth.IBluetoothSDKListener
 import com.grapesapps.myapplication.model.SharedPrefManager
 import com.grapesapps.myapplication.ui.theme.BudsApplicationTheme
-//import com.grapesapps.myapplication.view.navigation.Navigation
 import com.grapesapps.myapplication.vm.ClientDataViewModel
 import com.grapesapps.myapplication.vm.Home
 import com.grapesapps.myapplication.vm.Splash
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
-import java.util.*
 
 
 @AndroidEntryPoint
-@OptIn(ExperimentalAnimationApi::class)
 class MainActivity : ComponentActivity() {
-    private lateinit var navController: NavHostController
+    // private lateinit var navController: NavHostController
     private lateinit var pref: SharedPrefManager
-    private val CHANNEL_NAME = "Notification Channel"
-    private val CHANNEL_ID = "id=1"
-    private val NOTIFICATION_ID = 0
-    //  private lateinit var mService: BluetoothSDKService
 
     // Wear OS
     private val clientDataViewModel by viewModels<ClientDataViewModel>()
@@ -54,7 +54,6 @@ class MainActivity : ComponentActivity() {
     private val nodeClient by lazy { Wearable.getNodeClient(this) }
     private val splashVm by viewModels<Splash>()
     private val headsetVm by viewModels<Home>()
-
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,6 +66,68 @@ class MainActivity : ComponentActivity() {
             Uri.parse("wear://"),
             CapabilityClient.FILTER_REACHABLE
         )
+
+
+        val mBluetoothListener: IBluetoothSDKListener = object : IBluetoothSDKListener {
+
+            override fun onDiscoveryStarted() {
+                Log.e("IBluetoothSDKListener", "onDiscoveryStarted")
+            }
+
+            override fun onDiscoveryStopped() {
+                splashVm.onEndSearchReceiver()
+                Log.e("IBluetoothSDKListener", "onDiscoveryStopped")
+            }
+
+            override fun onDeviceDiscovered(device: BluetoothDevice?) {
+                Log.e("IBluetoothSDKListener", "onDeviceDiscovered")
+
+            }
+
+            override fun onDeviceConnected(device: BluetoothDevice?, message: String) {
+                Log.e("IBluetoothSDKListener", "onDeviceConnected $message")
+                splashVm.onDeviceConnected(message)
+            }
+
+            override fun onMessageReceived(device: BluetoothDevice?, message: String?) {
+                Log.e("IBluetoothSDKListener", "onMessageReceived: $message")
+            }
+
+            @SuppressLint("MissingPermission")
+            override fun onMessageSent(device: BluetoothDevice?) {
+                Log.e("IBluetoothSDKListener", "onMessageSent: ${device?.name}")
+            }
+
+            override fun onError(message: String?) {
+                Log.e("IBluetoothSDKListener", "onError: $message")
+            }
+
+            override fun onDeviceDisconnected() {
+                Log.e("IBluetoothSDKListener", "onDeviceDisconnected")
+
+            }
+
+            override fun onDeviceNotFound() {
+                splashVm.onDeviceNotFound()
+                Log.e("IBluetoothSDKListener", "onDeviceNotFound")
+            }
+
+            override fun onBluetoothDisabled() {
+                splashVm.onBluetoothDisabled()
+                Log.e("IBluetoothSDKListener", "onBluetoothDisabled")
+            }
+
+            override fun onBluetoothInitial() {
+                splashVm.load()
+            }
+
+            override fun onBluetoothEnabled() {
+                splashVm.onBluetoothEnabled()
+                Log.e("IBluetoothSDKListener", "onBluetoothEnabled")
+            }
+        }
+        BluetoothSDKListenerHelper.registerBluetoothSDKListener(this, mBluetoothListener)
+
 
         Log.e("EVENTS", "${clientDataViewModel.events}")
 
@@ -88,10 +149,8 @@ class MainActivity : ComponentActivity() {
                     Manifest.permission.RECEIVE_BOOT_COMPLETED,
                     Manifest.permission.WAKE_LOCK,
                     Manifest.permission.SYSTEM_ALERT_WINDOW,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                    Manifest.permission.ACCESS_FINE_LOCATION,
 
-                ),
+                    ),
                 1
             )
         }
@@ -103,6 +162,7 @@ class MainActivity : ComponentActivity() {
         registerReceiver(btClassicReceiver, intentFilter)
 
         setContent {
+           // BluetoothSDKListenerHelper.unregisterBluetoothSDKListener(applicationContext, mBluetoothListener)
             BudsApplicationTheme {
                 Box(
                     modifier = Modifier
@@ -115,6 +175,7 @@ class MainActivity : ComponentActivity() {
         }
 
     }
+
     private val btClassicReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
 
@@ -231,7 +292,6 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(btClassicReceiver)
-        // BluetoothSDKListenerHelper.unregisterBluetoothSDKListener(applicationContext, mBluetoothListener)
     }
 
     companion object {
