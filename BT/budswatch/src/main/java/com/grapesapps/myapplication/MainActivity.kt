@@ -36,26 +36,28 @@ class MainActivity : ComponentActivity() {
             MainApp(
                 isScreenRound = isScreenRound,
                 events = clientDataViewModel.events,
-                onQueryOtherDevicesClicked = ::onQueryOtherDevicesClicked,
-                onQueryMobileCameraClicked = ::onQueryMobileCameraClicked
+                onQueryNoise = ::onQueryNoise,
+                onQueryTransparent = ::onQueryTransparent,
+                onQueryOff = ::onQueryOff,
             )
         }
     }
 
-    private fun onQueryOtherDevicesClicked() {
+    private fun onQueryNoise() {
         lifecycleScope.launch {
             try {
                 val nodes = nodeClient.connectedNodes.await()
-
+                Log.d(TAG, "NODE SIZE ${nodes.size}")
                 // Send a message to all nodes in parallel
                 nodes.map { node ->
                     async {
-                        messageClient.sendMessage(node.id, COUNT_PATH, byteArrayOf())
+                        messageClient.sendMessage(node.id, QUERY_NOISE_MODE, byteArrayOf())
                             .await()
+                        Log.d(TAG, "Starting activity requests sent successfully")
+
                     }
                 }.awaitAll()
 
-                Log.d(TAG, "SEND MESSAGE TO PHONE")
             } catch (cancellationException: CancellationException) {
                 throw cancellationException
             } catch (exception: Exception) {
@@ -64,12 +66,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun onQueryMobileCameraClicked() {
+    private fun onQueryTransparent() {
         lifecycleScope.launch {
             try {
-                val nodes = getCapabilitiesForReachableNodes()
-                    .filterValues { "mobile" in it && "wear" in it }.keys
-                displayNodes(nodes)
+                val nodes = nodeClient.connectedNodes.await()
+                Log.d(TAG, "NODE SIZE ${nodes.size}")
+                // Send a message to all nodes in parallel
+                nodes.map { node ->
+                    async {
+                        messageClient.sendMessage(node.id, QUERY_TRANSPARENT_MODE, byteArrayOf())
+                            .await()
+                        Log.d(TAG, "Starting activity requests sent successfully")
+
+                    }
+                }.awaitAll()
+
             } catch (cancellationException: CancellationException) {
                 throw cancellationException
             } catch (exception: Exception) {
@@ -77,6 +88,31 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+
+    private fun onQueryOff() {
+        lifecycleScope.launch {
+            try {
+                val nodes = nodeClient.connectedNodes.await()
+                Log.d(TAG, "NODE SIZE ${nodes.size}")
+                // Send a message to all nodes in parallel
+                nodes.map { node ->
+                    async {
+                        messageClient.sendMessage(node.id, QUERY_OFF_MODE, byteArrayOf())
+                            .await()
+                        Log.d(TAG, "Starting activity requests sent successfully")
+
+                    }
+                }.awaitAll()
+
+            } catch (cancellationException: CancellationException) {
+                throw cancellationException
+            } catch (exception: Exception) {
+                Log.d(TAG, "Querying nodes failed: $exception")
+            }
+        }
+    }
+
 
     /**
      * Collects the capabilities for all nodes that are reachable using the [CapabilityClient].
@@ -131,13 +167,9 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
-        private const val COUNT_PATH = "/count"
-        private const val IMAGE_PATH = "/image"
-        private const val IMAGE_KEY = "photo"
-        private const val TIME_KEY = "time"
-        private const val COUNT_KEY = "count"
-        private const val CAMERA_CAPABILITY = "camera"
-        private const val WEAR_CAPABILITY = "wear"
-        private const val MOBILE_CAPABILITY = "mobile"
+        private const val START_ACTIVITY_PATH = "/start-activity"
+        private const val QUERY_NOISE_MODE = "/query-noise"
+        private const val QUERY_TRANSPARENT_MODE = "/query-transparent"
+        private const val QUERY_OFF_MODE = "/query-off"
     }
 }

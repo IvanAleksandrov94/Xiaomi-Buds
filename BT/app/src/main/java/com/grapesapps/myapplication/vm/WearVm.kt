@@ -48,7 +48,6 @@ class ClientDataViewModel :
                     DataEvent.TYPE_DELETED -> R.string.data_item_deleted
                     else -> R.string.data_item_unknown
                 }
-
                 Event(
                     title = title,
                     text = dataEvent.dataItem.toString()
@@ -59,6 +58,7 @@ class ClientDataViewModel :
 
     override fun onMessageReceived(messageEvent: MessageEvent) {
         Log.e("EVENTS", "${messageEvent.data}")
+
 //        when (messageEvent.path) {
 //            START_ACTIVITY_PATH -> {
 //                startActivity(

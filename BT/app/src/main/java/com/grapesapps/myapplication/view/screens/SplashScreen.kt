@@ -74,72 +74,11 @@ fun SplashScreen(
             )
         }
     }
-//
-//    val mBluetoothListener: IBluetoothSDKListener = object : IBluetoothSDKListener {
-//
-//        override fun onDiscoveryStarted() {
-//            Log.e("IBluetoothSDKListener", "onDiscoveryStarted")
-//        }
-//
-//        override fun onDiscoveryStopped() {
-//            viewModel.onEndSearchReceiver()
-//            Log.e("IBluetoothSDKListener", "onDiscoveryStopped")
-//        }
-//
-//        override fun onDeviceDiscovered(device: BluetoothDevice?) {
-//            Log.e("IBluetoothSDKListener", "onDeviceDiscovered")
-//
-//        }
-//
-//        override fun onDeviceConnected(device: BluetoothDevice?, message: String) {
-//            Log.e("IBluetoothSDKListener", "onDeviceConnected $message")
-//            viewModel.onDeviceConnected(message)
-//        }
-//
-//        override fun onMessageReceived(device: BluetoothDevice?, message: String?) {
-//            Log.e("IBluetoothSDKListener", "onMessageReceived: $message")
-//        }
-//
-//        @SuppressLint("MissingPermission")
-//        override fun onMessageSent(device: BluetoothDevice?) {
-//            Log.e("IBluetoothSDKListener", "onMessageSent: ${device?.name}")
-//        }
-//
-//        override fun onError(message: String?) {
-//            Log.e("IBluetoothSDKListener", "onError: $message")
-//        }
-//
-//        override fun onDeviceDisconnected() {
-//            Log.e("IBluetoothSDKListener", "onDeviceDisconnected")
-//
-//        }
-//
-//        override fun onDeviceNotFound() {
-//            viewModel.onDeviceNotFound()
-//            Log.e("IBluetoothSDKListener", "onDeviceNotFound")
-//        }
-//
-//        override fun onBluetoothDisabled() {
-//            viewModel.onBluetoothDisabled()
-//            Log.e("IBluetoothSDKListener", "onBluetoothDisabled")
-//        }
-//
-//        override fun onBluetoothInitial() {
-//            viewModel.load()
-//        }
-//
-//        override fun onBluetoothEnabled() {
-//            viewModel.onBluetoothEnabled()
-//            Log.e("IBluetoothSDKListener", "onBluetoothEnabled")
-//        }
-//    }
-
     LaunchedEffect(
         key1 = viewModel,
         block = {
             launch {
                 bindBluetoothService()
-             //   BluetoothSDKListenerHelper.registerBluetoothSDKListener(context, mBluetoothListener)
             }
         }
     )
@@ -170,7 +109,6 @@ fun SplashScreen(
         onDispose {
             val connection = viewModel.getServiceConnection()
             context.unbindService(connection);
-           // BluetoothSDKListenerHelper.unregisterBluetoothSDKListener(context, mBluetoothListener)
         }
     }
     when (val s = state.value) {
@@ -181,6 +119,17 @@ fun SplashScreen(
     }
 
     val stateMainText = remember {
+        MutableTransitionState(false).apply {
+            targetState = true
+        }
+    }
+    val stateMainTextBluetooth = remember {
+        MutableTransitionState(false).apply {
+            targetState = true
+        }
+    }
+
+    val stateMainTextDeviceName = remember {
         MutableTransitionState(false).apply {
             targetState = true
         }
@@ -217,7 +166,7 @@ fun SplashScreen(
                         when (val splashState = state.value) {
                             is SplashState.SplashBluetoothDisabled -> {
                                 AnimatedVisibility(
-                                    visibleState = stateMainText,
+                                    visibleState = stateMainTextBluetooth,
                                     enter = fadeIn(animationSpec = tween(durationMillis = 2000)),
                                     exit = fadeOut(animationSpec = tween(durationMillis = 1))
                                 ) {
@@ -230,7 +179,7 @@ fun SplashScreen(
                             }
                             is SplashState.SplashSuccessConnected -> {
                                 AnimatedVisibility(
-                                    visibleState = stateMainText,
+                                    visibleState = stateMainTextDeviceName,
                                     enter = fadeIn(animationSpec = tween(durationMillis = 3000)),
                                     exit = fadeOut(animationSpec = tween(durationMillis = 1))
                                 ) {

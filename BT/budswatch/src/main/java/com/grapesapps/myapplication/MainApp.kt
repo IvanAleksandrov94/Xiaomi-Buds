@@ -31,8 +31,9 @@ import kotlinx.coroutines.launch
 fun MainApp(
     events: List<Event>,
     isScreenRound: Boolean,
-    onQueryOtherDevicesClicked: () -> Unit,
-    onQueryMobileCameraClicked: () -> Unit
+    onQueryNoise: () -> Unit,
+    onQueryTransparent: () -> Unit,
+    onQueryOff: () -> Unit,
 ) {
     val context = LocalContext.current.applicationContext
     lateinit var vibrator: Vibrator
@@ -42,6 +43,8 @@ fun MainApp(
     Log.e("SCREEN", "isScreenRound: $isScreenRound")
 
 
+
+
     LaunchedEffect(key1 = true, block = {
         launch {
             vibrator = context?.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
@@ -49,7 +52,7 @@ fun MainApp(
     })
 
     fun vibrate() {
-        vibrator.vibrate(VibrationEffect.createWaveform(LongArray(100), DEFAULT_AMPLITUDE))
+        //  vibrator.vibrate(VibrationEffect.createWaveform(LongArray(100), DEFAULT_AMPLITUDE))
     }
 
     Scaffold(
@@ -170,6 +173,8 @@ fun MainApp(
                         checked = selectedNoise == 0,
                         onCheckedChange = {
                             if (selectedNoise != 0) {
+                               onQueryNoise()
+
                                 selectedNoise = 0
                             }
                         },
@@ -199,6 +204,7 @@ fun MainApp(
                         checked = selectedNoise == 1,
                         onCheckedChange = {
                             if (selectedNoise != 1) {
+                                onQueryOff()
                                 selectedNoise = 1
                             }
 
@@ -230,6 +236,7 @@ fun MainApp(
                         checked = selectedNoise == 2,
                         onCheckedChange = {
                             if (selectedNoise != 2) {
+                                 onQueryTransparent()
                                 selectedNoise = 2
                             }
 
@@ -391,20 +398,7 @@ fun NoiseControl(
                         )
                     }
                 }
-
             }
         }
     }
-
-}
-
-@Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
-@Composable
-fun MainAppPreviewEmpty() {
-    MainApp(
-        isScreenRound = false,
-        events = emptyList(),
-        onQueryOtherDevicesClicked = {},
-        onQueryMobileCameraClicked = {}
-    )
 }

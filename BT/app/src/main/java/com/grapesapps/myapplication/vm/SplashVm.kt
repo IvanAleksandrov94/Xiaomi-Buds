@@ -69,12 +69,15 @@ class Splash : ViewModel() {
     }
 
 
-    fun onDeviceConnected(deviceName: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            viewState.postValue(SplashState.SplashSuccessConnected(deviceName = deviceName))
-            delay(2000L)
-            viewState.postValue(SplashState.SplashSuccessNavigate)
-        }
+    fun onDeviceConnected(deviceName: String, deviceFounded: Boolean = false) {
+//        if (deviceFounded) {
+//            viewState.postValue(SplashState.SplashSuccessNavigate)
+//        } else
+            viewModelScope.launch(Dispatchers.IO) {
+                viewState.postValue(SplashState.SplashSuccessConnected(deviceName = deviceName))
+                delay(2000L)
+                viewState.postValue(SplashState.SplashSuccessNavigate)
+            }
     }
 
 

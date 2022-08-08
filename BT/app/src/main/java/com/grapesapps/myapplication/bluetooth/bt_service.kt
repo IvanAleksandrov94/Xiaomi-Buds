@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
+import android.net.Uri
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
@@ -15,16 +16,19 @@ import android.util.Log
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.google.android.gms.wearable.*
 import com.grapesapps.myapplication.MainActivity
 import com.grapesapps.myapplication.R
 import com.grapesapps.myapplication.bluetooth.BluetoothBatteryCommands.percentList
 import com.grapesapps.myapplication.bluetooth.BluetoothBatteryCommands.percentListBattery
 import com.grapesapps.myapplication.entity.*
+import com.grapesapps.myapplication.vm.Event
 import com.grapesapps.myapplication.vm.Home
 import com.grapesapps.myapplication.vm.Splash
 import dagger.Provides
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.asFlow
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -32,7 +36,9 @@ import java.util.*
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class BluetoothSDKService : Service() {
+class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
+    MessageClient.OnMessageReceivedListener,
+    CapabilityClient.OnCapabilityChangedListener {
 
     companion object {
         private const val TAG = "BT_SERVICE"
@@ -41,6 +47,10 @@ class BluetoothSDKService : Service() {
         private const val CHANNEL_STOP_ACTION = "STOP_ACTION"
         private const val CHANNEL_START_ACTION = "START_ACTION"
         private const val CHANNEL_STOP_MESSAGE = "Стоп"
+        private const val START_ACTIVITY_PATH = "/start-activity"
+        private const val QUERY_NOISE_MODE = "/query-noise"
+        private const val QUERY_TRANSPARENT_MODE = "/query-transparent"
+        private const val QUERY_OFF_MODE = "/query-off"
         private const val NOTIFICATION_TITLE_CONNECTED =
             "Наушники подключены"
         private const val NOTIFICATION_TITLE_DISCONNECTED =
@@ -63,18 +73,13 @@ class BluetoothSDKService : Service() {
     private var btHeadset: BluetoothHeadset? = null
     private var btSocket: BluetoothSocket? = null
     private fun byteArrayOfInts(ints: List<Int>) = ByteArray(ints.size) { pos -> ints[pos].toByte() }
+    private val dataClient by lazy { Wearable.getDataClient(this) }
+    private val messageClient by lazy { Wearable.getMessageClient(this) }
+    private val capabilityClient by lazy { Wearable.getCapabilityClient(this) }
+    private val nodeClient by lazy { Wearable.getNodeClient(this) }
 
-    // @Inject lateinit var userService: Splash
-    //  @Inject lateinit var userService1: Home
     private val btUuid = "0000fd2d-0000-1000-8000-00805f9b34fb"
 
-
-    // Bluetooth connections
-//    private var connectThread: ConnectThread? = null
-//    private var connectedThread: ConnectedThread? = null
-//    private var mAcceptThread: AcceptThread? = null
-
-    // Invoked only first time
     @SuppressLint("MissingPermission")
     override fun onCreate() {
         super.onCreate()
@@ -84,7 +89,13 @@ class BluetoothSDKService : Service() {
         btDevice = btAdapter.bondedDevices?.firstOrNull { it.name == "Xiaomi Buds 3T Pro" }
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         context = this
-
+        dataClient.addListener(this)
+        messageClient.addListener(this)
+        capabilityClient.addListener(
+            this,
+            Uri.parse("wear://"),
+            CapabilityClient.FILTER_REACHABLE
+        )
         Log.e("BT_SERVICE", "IS CREATE")
     }
 
@@ -106,32 +117,8 @@ class BluetoothSDKService : Service() {
             return START_STICKY
         }
 
-        val d = audioManager.getDevices(AudioManager.GET_DEVICES_INPUTS)
-        for (i in d) {
-            if (i.productName == "Xiaomi Buds 3T Pro") {
-                pushBroadcastMessage(
-                    BluetoothUtils.ACTION_DEVICE_CONNECTED,
-                    null,
-                    "${i.productName}"
-                )
-            }
-        }
-
-        if (!btAdapter.isEnabled) {
-            pushBroadcastMessage(
-                BluetoothUtils.ACTION_BT_OFF,
-                null,
-                "ACTION_BT_OFF"
-            )
-            startSystemBluetoothStateReceiver()
-        } else {
-            pushBroadcastMessage(
-                BluetoothUtils.ACTION_DEVICE_INITIAL,
-                null,
-                "a"
-            )
-            connectDevice(btDevice)
-        }
+        /// Init Headphones connect
+        initConnectionDevice()
 
         Log.e("BT_SERVICE", "IS STARTED")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -140,7 +127,6 @@ class BluetoothSDKService : Service() {
                 CHANNEL_NAME,
                 NotificationManager.IMPORTANCE_DEFAULT
             )
-
 
             val notificationManager =
                 getSystemService(NotificationManager::class.java)
@@ -216,6 +202,7 @@ class BluetoothSDKService : Service() {
                         btSocket?.close()
                     }
                     IOBluetoothService(btSocket!!).connect()
+
                     binder.stopDiscovery()
                     pushBroadcastMessage(
                         BluetoothUtils.ACTION_DEVICE_CONNECTED,
@@ -231,14 +218,50 @@ class BluetoothSDKService : Service() {
                 i++
                 delay(100L)
             } while (i < 2)
+        }
+    }
 
+    private fun initConnectionDevice() {
+        scopeService.launch(Dispatchers.IO) {
+            delay(1000L)
+            val d = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            var isFoundedDeviceName = false
+            for (i in d) {
+                if (i.productName == "Xiaomi Buds 3T Pro") {
+                    isFoundedDeviceName = true
+                    pushBroadcastMessage(
+                        BluetoothUtils.ACTION_DEVICE_FOUND_CONNECTED,
+                        null,
+                        "${i.productName}"
+                    )
+                }
+            }
+
+            if (!btAdapter.isEnabled) {
+                pushBroadcastMessage(
+                    BluetoothUtils.ACTION_BT_OFF,
+                    null,
+                    "ACTION_BT_OFF"
+                )
+                startSystemBluetoothStateReceiver()
+            } else {
+                if (!isFoundedDeviceName) {
+                    pushBroadcastMessage(
+                        BluetoothUtils.ACTION_DEVICE_INITIAL,
+                        null,
+                        "a"
+                    )
+                    connectDevice(btDevice)
+                } else {
+                    connectDevice(btDevice)
+                }
+            }
         }
     }
 
     private inner class IOBluetoothService(private val socket: BluetoothSocket) {
         private val mmInStream: InputStream = socket.inputStream
         private val mmOutStream: OutputStream = socket.outputStream
-        //  private val mmBuffer: ByteArray = ByteArray(256)
 
         @SuppressLint("MissingPermission")
         fun connect() {
@@ -246,7 +269,6 @@ class BluetoothSDKService : Service() {
             btSocket = socket
             listenData()
         }
-
 
         fun sendData(data: ByteArray) {
             scopeService.launch(Dispatchers.IO) {
@@ -271,26 +293,19 @@ class BluetoothSDKService : Service() {
 
         }
 
+
         private fun listenData() = scopeService.launch(Dispatchers.IO) {
             try {
-
                 while (true) {
                     val bytes = mmInStream.available()
                     if (bytes != 0) {
                         val tempBuffer = ByteArray(bytes)
                         mmInStream.read(tempBuffer, 0, bytes)
-                        Log.i(TAG, "!!!!!!!")
-                        val parsed = tempBuffer.joinToString(" ") { "%02x".format(it) }
-                        //  Log.i(TAG, "${tempBuffer.map { it.toByte() }}")
-                        Log.i(TAG, parsed)
 
                         if (tempBuffer.size == 25 && tempBuffer[6] == 0x11.toByte()) {
-
                             val mutableTempBuffer: MutableList<Byte> = tempBuffer.toMutableList()
-
                             val parameters = gyroConvert(mutableTempBuffer)
                             if (parameters != null) audioManager.setParameters(parameters)
-
 
                             val last = mutableTempBuffer[24]
 
@@ -298,9 +313,13 @@ class BluetoothSDKService : Service() {
                             mutableTempBuffer.add(6, 0x12.toByte())
                             mutableTempBuffer[7] = 0x00.toByte()
                             mutableTempBuffer[25] = last
-
-
                             /// btService.sendServiceMessage(mutableList.toByteArray())
+                        } else {
+                            // LOGS
+                            Log.i(TAG, "!!!!!!!")
+                            val parsed = tempBuffer.joinToString(" ") { "%02x".format(it) }
+                            //  Log.i(TAG, "${tempBuffer.map { it.toByte() }}")
+                            Log.i(TAG, parsed)
                         }
 
                         // Status Headset
@@ -517,9 +536,16 @@ class BluetoothSDKService : Service() {
         fun connectDevice() = connectDevice(btDevice)
 
 
-        fun send() {
+        fun send(command: List<Int>) {
             Log.e("!@#", "TESTY")
-            IOBluetoothService(btSocket!!).sendData(byteArrayOfInts(BluetoothCommands.headsetInfo))
+            try {
+                IOBluetoothService(btSocket!!).sendData(byteArrayOfInts(command))
+            } catch (e: NullPointerException) {
+                connectDevice()
+                Log.e(TAG, "btSocket is NULL")
+            } catch (e: Exception) {
+                Log.e(TAG, e.message ?: "ERROR")
+            }
         }
 
         @SuppressLint("MissingPermission")
@@ -686,7 +712,7 @@ class BluetoothSDKService : Service() {
 
         if ((yawConverted < 360 || yawConverted > -360) || (pitchConverted < 360 || pitchConverted > -360) || (rowConverted < 360 || rowConverted > -360)) {
             // Log.e(TAG, "SEND GYRO: yaw:${gyroData.yaw}, pitch:${gyroData.pitch}, row:${gyroData.row} ")
-            return "pitch=$pitchConverted;row=rowConverted;yaw=$yawConverted"
+            return "pitch=$pitchConverted;row=$rowConverted;yaw=$yawConverted"
         }
 
         return null
@@ -695,5 +721,52 @@ class BluetoothSDKService : Service() {
     private fun gyroConvertPosition(position: String?): Float {
         if (position == null) return 0.0f
         return java.lang.Float.intBitsToFloat(position.toLong(16).toInt())
+    }
+
+    ///
+    ///
+    ///   WEAR OS IMPLEMENT
+    ///
+    ///
+    override fun onDataChanged(dataEvents: DataEventBuffer) {
+        Log.e("EVENTS PHONE", "${dataEvents.map { it.dataItem }}")
+//        _events.addAll(
+//            dataEvents.map { dataEvent ->
+//                val title = when (dataEvent.type) {
+//                    DataEvent.TYPE_CHANGED -> R.string.data_item_changed
+//                    DataEvent.TYPE_DELETED -> R.string.data_item_deleted
+//                    else -> R.string.data_item_unknown
+//                }
+//                Event(
+//                    title = title,
+//                    text = dataEvent.dataItem.toString()
+//                )
+//            }
+//        )
+    }
+
+    override fun onMessageReceived(messageEvent: MessageEvent) {
+        Log.e("EVENTS", messageEvent.path)
+        when (messageEvent.path) {
+            START_ACTIVITY_PATH -> {
+                val notifyIntent = Intent(this, BluetoothSDKService::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    action = "START_ACTION"
+                }
+                startService(notifyIntent)
+            }
+            QUERY_NOISE_MODE -> binder.send(BluetoothCommands.noise)
+            QUERY_TRANSPARENT_MODE -> binder.send(BluetoothCommands.transparency)
+            QUERY_OFF_MODE -> binder.send(BluetoothCommands.off)
+        }
+    }
+
+    override fun onCapabilityChanged(capabilityInfo: CapabilityInfo) {
+//        _events.add(
+//            Event(
+//                title = R.string.capability_changed,
+//                text = capabilityInfo.toString()
+//            )
+//        )
     }
 }

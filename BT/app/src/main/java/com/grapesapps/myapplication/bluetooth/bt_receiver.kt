@@ -45,6 +45,9 @@ class BluetoothSDKListenerHelper {
                     BluetoothUtils.ACTION_DEVICE_CONNECTED -> {
                         mGlobalListener?.onDeviceConnected(device, message ?: "Успешно")
                     }
+                    BluetoothUtils.ACTION_DEVICE_FOUND_CONNECTED -> {
+                        mGlobalListener?.onDeviceFoundConnected(device, message ?: "Успешно")
+                    }
                     BluetoothUtils.ACTION_MESSAGE_RECEIVED -> {
                         mGlobalListener?.onMessageReceived(device, message)
                     }
@@ -60,12 +63,13 @@ class BluetoothSDKListenerHelper {
                     BluetoothUtils.ACTION_DEVICE_NOT_FOUND -> {
                         mGlobalListener?.onDeviceNotFound()
                     }
-                    BluetoothUtils.ACTION_BT_OFF-> {
+                    BluetoothUtils.ACTION_BT_OFF -> {
                         mGlobalListener?.onBluetoothDisabled()
                     }
                     BluetoothUtils.ACTION_BT_ON -> {
                         mGlobalListener?.onBluetoothEnabled()
-                    }BluetoothUtils.ACTION_DEVICE_INITIAL -> {
+                    }
+                    BluetoothUtils.ACTION_DEVICE_INITIAL -> {
                         mGlobalListener?.onBluetoothInitial()
                     }
                 }
@@ -86,6 +90,7 @@ class BluetoothSDKListenerHelper {
                     it.addAction(BluetoothUtils.ACTION_DISCOVERY_STARTED)
                     it.addAction(BluetoothUtils.ACTION_DISCOVERY_STOPPED)
                     it.addAction(BluetoothUtils.ACTION_DEVICE_CONNECTED)
+                    it.addAction(BluetoothUtils.ACTION_DEVICE_FOUND_CONNECTED)
                     it.addAction(BluetoothUtils.ACTION_MESSAGE_RECEIVED)
                     it.addAction(BluetoothUtils.ACTION_MESSAGE_SENT)
                     it.addAction(BluetoothUtils.ACTION_CONNECTION_ERROR)
