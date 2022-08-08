@@ -2,14 +2,18 @@ package com.grapesapps.myapplication.vm
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
+import android.content.ComponentName
 import android.content.Context
+import android.content.ServiceConnection
 import android.media.AudioManager
+import android.os.IBinder
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.grapesapps.myapplication.BluetoothService
+import com.grapesapps.myapplication.bluetooth.BluetoothSDKService
 import com.grapesapps.myapplication.entity.*
 import com.grapesapps.myapplication.model.DaggerRepositoryComponent
 import com.grapesapps.myapplication.model.SharedPrefManager
@@ -48,7 +52,7 @@ sealed class HomeState {
 @HiltViewModel
 class Home @Inject constructor(
     @ApplicationContext appContext: Context,
-    private val btService: BluetoothService,
+     private val btService: BluetoothService,
 ) : ViewModel() {
     private val viewState: MutableLiveData<HomeState> = MutableLiveData(HomeState.HomeStateInitial)
     private val errorViewState: MutableLiveData<String?> = MutableLiveData()
@@ -59,7 +63,7 @@ class Home @Inject constructor(
     private fun byteArrayOfInts(ints: List<Int>) = ByteArray(ints.size) { pos -> ints[pos].toByte() }
     private lateinit var inputStream: InputStream
     private lateinit var audioManager: AudioManager
-
+    private val mBinder: MutableLiveData<BluetoothSDKService> = MutableLiveData<BluetoothSDKService>()
 
     // in Service
     private val percentList = listOf(
@@ -75,11 +79,13 @@ class Home @Inject constructor(
         -38, -33, -28
     )
 
-
     init {
         DaggerRepositoryComponent.create().injectHome(this)
         sharedPrefManager = SharedPrefManager(appContext)
+
     }
+
+
 
     fun searchDevices() {
         viewModelScope.launch(Dispatchers.IO) {

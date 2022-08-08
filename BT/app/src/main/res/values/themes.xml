@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+<!-- Base application theme. -->
+<style name="Theme.MyApplication" parent="Theme.AppCompat.Light.DarkActionBar">
+    <!-- Primary brand color. -->
+    <item name="colorPrimary">@color/black</item>
 
-    <style name="Theme.MyApplication" parent="android:Theme.Material.Light.NoActionBar" />
+</style>
+<style name="Theme.NoActionBar" parent="Theme.AppCompat.Light.NoActionBar">
+    <!-- Customize your theme here. -->
+    <item name="colorPrimary">@color/white</item>
+    <item name="colorPrimaryDark">@color/white</item>
+    <item name="colorAccent">@color/white</item>
+</style>
 </resources>

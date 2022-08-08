@@ -34,11 +34,20 @@
 <!--            android:required="true" />-->
         <service
             android:name=".bluetooth.BluetoothSDKService"
+            android:parentActivityName=".MainActivity"
+            android:taskAffinity=""
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
             android:enabled="true"
+            android:theme="@style/Theme.MyApplication"
             android:exported="false" />
         <activity
             android:name=".MainActivity"
+            android:parentActivityName=".MainActivity"
+            android:taskAffinity=""
+            android:launchMode="singleTask"
             android:exported="true"
+            android:excludeFromRecents="false"
             android:theme="@style/Theme.MyApplication">
 
             <intent-filter>

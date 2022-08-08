@@ -27,45 +27,51 @@ class BluetoothSDKListenerHelper {
                 return mGlobalListener == null
             }
 
-            override fun onReceive(context: Context?, intent: Intent?) {
+            override fun onReceive(context: Context, intent: Intent?) {
                 val device =
-                    intent!!.getParcelableExtra<BluetoothDevice>(BluetoothUtils.EXTRA_DEVICE)
-                val message = intent.getStringExtra(BluetoothUtils.EXTRA_MESSAGE)
+                    intent?.getParcelableExtra<BluetoothDevice>(BluetoothUtils.EXTRA_DEVICE)
+                val message = intent?.getStringExtra(BluetoothUtils.EXTRA_MESSAGE)
 
-                when (intent.action) {
+                when (intent?.action) {
                     BluetoothUtils.ACTION_DEVICE_FOUND -> {
-                        mGlobalListener!!.onDeviceDiscovered(device)
+                        mGlobalListener?.onDeviceDiscovered(device)
                     }
                     BluetoothUtils.ACTION_DISCOVERY_STARTED -> {
-                        mGlobalListener!!.onDiscoveryStarted()
+                        mGlobalListener?.onDiscoveryStarted()
                     }
                     BluetoothUtils.ACTION_DISCOVERY_STOPPED -> {
-                        mGlobalListener!!.onDiscoveryStopped()
+                        mGlobalListener?.onDiscoveryStopped()
                     }
                     BluetoothUtils.ACTION_DEVICE_CONNECTED -> {
-                        mGlobalListener!!.onDeviceConnected(device)
+                        mGlobalListener?.onDeviceConnected(device)
                     }
                     BluetoothUtils.ACTION_MESSAGE_RECEIVED -> {
-                        mGlobalListener!!.onMessageReceived(device, message)
+                        mGlobalListener?.onMessageReceived(device, message)
                     }
                     BluetoothUtils.ACTION_MESSAGE_SENT -> {
-                        mGlobalListener!!.onMessageSent(device)
+                        mGlobalListener?.onMessageSent(device)
                     }
                     BluetoothUtils.ACTION_CONNECTION_ERROR -> {
-                        mGlobalListener!!.onError(message)
+                        mGlobalListener?.onError(message)
                     }
                     BluetoothUtils.ACTION_DEVICE_DISCONNECTED -> {
-                        mGlobalListener!!.onDeviceDisconnected()
+                        mGlobalListener?.onDeviceDisconnected()
                     }
-                    BluetoothUtils.ACTION_CONNECTION_NOT_FOUND -> {
-                        mGlobalListener!!.onDeviceNotFound()
+                    BluetoothUtils.ACTION_DEVICE_NOT_FOUND -> {
+                        mGlobalListener?.onDeviceNotFound()
+                    }
+                    BluetoothUtils.ACTION_BT_OFF-> {
+                        mGlobalListener?.onBluetoothDisabled()
+                    }
+                    BluetoothUtils.ACTION_BT_ON -> {
+                        mGlobalListener?.onBluetoothEnabled()
                     }
                 }
             }
         }
 
         fun registerBluetoothSDKListener(
-            context: Context?,
+            context: Context,
             listener: IBluetoothSDKListener
         ) {
             if (mBluetoothSDKBroadcastReceiver == null) {
@@ -80,11 +86,13 @@ class BluetoothSDKListenerHelper {
                     it.addAction(BluetoothUtils.ACTION_MESSAGE_SENT)
                     it.addAction(BluetoothUtils.ACTION_CONNECTION_ERROR)
                     it.addAction(BluetoothUtils.ACTION_DEVICE_DISCONNECTED)
-                    it.addAction(BluetoothUtils.ACTION_CONNECTION_NOT_FOUND)
+                    it.addAction(BluetoothUtils.ACTION_DEVICE_NOT_FOUND)
+                    it.addAction(BluetoothUtils.ACTION_BT_OFF)
+                    it.addAction(BluetoothUtils.ACTION_BT_ON)
                 }
 
 
-                LocalBroadcastManager.getInstance(context!!).registerReceiver(
+                LocalBroadcastManager.getInstance(context).registerReceiver(
                     mBluetoothSDKBroadcastReceiver!!, intentFilter
                 )
             }

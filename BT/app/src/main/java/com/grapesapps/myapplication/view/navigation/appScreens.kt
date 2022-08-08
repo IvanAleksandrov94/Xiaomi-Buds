@@ -1,9 +1,12 @@
 package com.grapesapps.myapplication.view.navigation
+import kotlinx.parcelize.Parcelize
+import android.os.Parcelable
 
-sealed class AppScreens(val route: String) {
-    // Splash route
-    object SplashScreen : AppScreens("splash_screen")
 
-    // HomeScreen route
-    object HomeScreen : AppScreens("main_screen")
+sealed class Screen : Parcelable {
+    @Parcelize
+    object SplashScreen : Screen()
+
+    @Parcelize
+    object HomeScreen : Screen()
 }

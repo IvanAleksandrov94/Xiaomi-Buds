@@ -4,6 +4,15 @@ import android.bluetooth.BluetoothDevice
 
 interface IBluetoothSDKListener {
     /**
+     * from action BluetoothUtils.ACTION_BT_ON
+     */
+    fun onBluetoothEnabled()
+    /**
+     * from action BluetoothUtils.ACTION_BT_OFF
+     */
+    fun onBluetoothDisabled()
+
+    /**
      * from action BluetoothUtils.ACTION_DISCOVERY_STARTED
      */
     fun onDiscoveryStarted()
@@ -44,7 +53,8 @@ interface IBluetoothSDKListener {
     fun onDeviceDisconnected()
 
     /**
-     * from action BluetoothUtils.ACTION_CONNECTION_NOT_FOUND
+     * from action BluetoothUtils.ACTION_DEVICE_NOT_FOUND
      */
     fun onDeviceNotFound()
+
 }

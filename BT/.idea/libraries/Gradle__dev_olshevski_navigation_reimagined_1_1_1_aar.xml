@@ -1,0 +1,15 @@
+<component name="libraryTable">
+  <library name="Gradle: dev.olshevski.navigation:reimagined:1.1.1@aar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.gradle/caches/transforms-3/3524dce9110f9472b5b4c5097ad84f05/transformed/reimagined-1.1.1/jars/classes.jar!/" />
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-3/3524dce9110f9472b5b4c5097ad84f05/transformed/reimagined-1.1.1/res" />
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-3/3524dce9110f9472b5b4c5097ad84f05/transformed/reimagined-1.1.1/AndroidManifest.xml" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/dev.olshevski.navigation/reimagined/1.1.1/51b8784e195e63c06ffd745143f7331565d1afd5/reimagined-1.1.1-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/dev.olshevski.navigation/reimagined/1.1.1/15f552b3e4b0501a0b6feb83994dd56b372a1592/reimagined-1.1.1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
