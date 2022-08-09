@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
 class BluetoothSDKListenerHelper {
@@ -31,7 +32,7 @@ class BluetoothSDKListenerHelper {
                 val device =
                     intent?.getParcelableExtra<BluetoothDevice>(BluetoothUtils.EXTRA_DEVICE)
                 val message = intent?.getStringExtra(BluetoothUtils.EXTRA_MESSAGE)
-
+                Log.e("BluetoothUtilsINTENT", "${intent?.action}")
                 when (intent?.action) {
                     BluetoothUtils.ACTION_DEVICE_FOUND -> {
                         mGlobalListener?.onDeviceDiscovered(device)
@@ -45,9 +46,9 @@ class BluetoothSDKListenerHelper {
                     BluetoothUtils.ACTION_DEVICE_CONNECTED -> {
                         mGlobalListener?.onDeviceConnected(device, message ?: "Успешно")
                     }
-                    BluetoothUtils.ACTION_DEVICE_FOUND_CONNECTED -> {
-                        mGlobalListener?.onDeviceFoundConnected(device, message ?: "Успешно")
-                    }
+//                    BluetoothUtils.ACTION_DEVICE_FOUND_CONNECTED -> {
+//                        mGlobalListener?.onDeviceFoundConnected(device, message ?: "Успешно")
+//                    }
                     BluetoothUtils.ACTION_MESSAGE_RECEIVED -> {
                         mGlobalListener?.onMessageReceived(device, message)
                     }
@@ -90,7 +91,7 @@ class BluetoothSDKListenerHelper {
                     it.addAction(BluetoothUtils.ACTION_DISCOVERY_STARTED)
                     it.addAction(BluetoothUtils.ACTION_DISCOVERY_STOPPED)
                     it.addAction(BluetoothUtils.ACTION_DEVICE_CONNECTED)
-                    it.addAction(BluetoothUtils.ACTION_DEVICE_FOUND_CONNECTED)
+                   // it.addAction(BluetoothUtils.ACTION_DEVICE_FOUND_CONNECTED)
                     it.addAction(BluetoothUtils.ACTION_MESSAGE_RECEIVED)
                     it.addAction(BluetoothUtils.ACTION_MESSAGE_SENT)
                     it.addAction(BluetoothUtils.ACTION_CONNECTION_ERROR)

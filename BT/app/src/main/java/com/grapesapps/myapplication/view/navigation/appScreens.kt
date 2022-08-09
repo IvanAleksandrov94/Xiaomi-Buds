@@ -8,5 +8,5 @@ sealed class Screen : Parcelable {
     object SplashScreen : Screen()
 
     @Parcelize
-    object HomeScreen : Screen()
+    object HeadphoneScreen : Screen()
 }

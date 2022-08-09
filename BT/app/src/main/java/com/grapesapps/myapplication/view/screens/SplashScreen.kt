@@ -1,14 +1,10 @@
 package com.grapesapps.myapplication.view.screens
 
-import android.annotation.SuppressLint
-import android.bluetooth.BluetoothDevice
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.os.Message
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -35,19 +31,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.Lifecycle
-import com.grapesapps.myapplication.bluetooth.BluetoothSDKListenerHelper
 import com.grapesapps.myapplication.bluetooth.BluetoothSDKService
-import com.grapesapps.myapplication.bluetooth.IBluetoothSDKListener
-import com.grapesapps.myapplication.observeAsState
 import com.grapesapps.myapplication.ui.theme.BudsApplicationTheme
 import com.grapesapps.myapplication.view.navigation.Screen
-import com.grapesapps.myapplication.vm.HomeState
+import com.grapesapps.myapplication.view.observeAsState
 import com.grapesapps.myapplication.vm.Splash
 import com.grapesapps.myapplication.vm.SplashState
 import dev.olshevski.navigation.reimagined.NavController
 import dev.olshevski.navigation.reimagined.navigate
+import dev.olshevski.navigation.reimagined.replaceAll
 import kotlinx.coroutines.*
-import okhttp3.internal.wait
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,6 +50,7 @@ fun SplashScreen(
     navController: NavController<Screen>,
 ) {
     val state: State<SplashState?> = viewModel.viewStateSplash.observeAsState()
+    val stateNavigate: State<Boolean?> = viewModel.viewStateSplashNavigate.observeAsState()
     val context = LocalContext.current
     val lifecycleStateObserver = LocalLifecycleOwner.current.lifecycle.observeAsState()
     val lifecycleState = lifecycleStateObserver.value
@@ -78,6 +72,7 @@ fun SplashScreen(
         key1 = viewModel,
         block = {
             launch {
+            //    viewModel.load()
                 bindBluetoothService()
             }
         }
@@ -111,12 +106,7 @@ fun SplashScreen(
             context.unbindService(connection);
         }
     }
-    when (val s = state.value) {
-        is SplashState.SplashSuccessNavigate -> {
-            navController.navigate(Screen.HomeScreen)
-        }
-        else -> {}
-    }
+
 
     val stateMainText = remember {
         MutableTransitionState(false).apply {
@@ -140,6 +130,11 @@ fun SplashScreen(
             targetState = true
         }
     }
+    val stateSearchProcess = remember {
+        MutableTransitionState(false).apply {
+            targetState = true
+        }
+    }
 
 //    var stateSearch by remember { mutableStateOf(true) }
     val stateOpenBluetoothText  = remember {
@@ -149,7 +144,19 @@ fun SplashScreen(
     }
     var stateAnim by remember { mutableStateOf(true) }
 
+//    when (state.value) {
+//        is SplashState.SplashSuccessConnected -> {
+//            stateMainTextDeviceName.targetState = false
+//        }
+//        else -> {}
+//    }
 
+    when (stateNavigate.value) {
+        true -> {
+            navController.replaceAll(Screen.HeadphoneScreen)
+        }
+        else -> {}
+    }
     BudsApplicationTheme {
         Scaffold(
             content = { contentPadding ->
@@ -170,48 +177,47 @@ fun SplashScreen(
                                     enter = fadeIn(animationSpec = tween(durationMillis = 2000)),
                                     exit = fadeOut(animationSpec = tween(durationMillis = 1))
                                 ) {
-                                    Text(
-                                        text = "Включите Bluetooth",
-                                        fontSize = 30.sp,
-                                        modifier = Modifier.padding(bottom = 35.dp)
-                                    )
+                                    Box(Modifier.height(100.dp)) {
+                                        Text(
+                                            text = "Включите Bluetooth",
+                                            fontSize = 30.sp,
+                                            modifier = Modifier.padding(bottom = 35.dp)
+                                        )
+                                    }
                                 }
                             }
                             is SplashState.SplashSuccessConnected -> {
                                 AnimatedVisibility(
                                     visibleState = stateMainTextDeviceName,
-                                    enter = fadeIn(animationSpec = tween(durationMillis = 3000)),
-                                    exit = fadeOut(animationSpec = tween(durationMillis = 1))
+                                    enter = fadeIn(animationSpec = tween(durationMillis = 1000)),
                                 ) {
+                                    Box(Modifier.height(100.dp)){
                                     Text(
                                         text = splashState.deviceName,
                                         fontSize = 30.sp,
                                         modifier = Modifier.padding(bottom = 35.dp)
-                                    )
+                                    )}
                                 }
                             }
                             is SplashState.SplashReceiverStartSearch -> {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-//                                    AnimatedVisibility(
-//                                        visibleState = stateMainText,
-//                                        enter = fadeIn(animationSpec = tween(durationMillis = 2000)),
-//                                        exit = fadeOut(animationSpec = tween(durationMillis = 1))
-//                                    ) {
-                                    Text(
-                                        text = "Подключите наушники",
-                                        fontSize = 30.sp,
-                                        modifier = Modifier.padding(bottom = 35.dp)
-                                    )
-                                    //}
-                                    LoadingIndicator(
-                                        animating = true,
-                                        modifier = Modifier.graphicsLayer { alpha = if (stateAnim) 1f else 0f },
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        indicatorSpacing = 5.dp,
-                                        animationType = AnimationType.Bounce,
-                                    )
+                                Box(Modifier.height(100.dp)) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = "Подключите наушники",
+                                            fontSize = 30.sp,
+                                            modifier = Modifier.padding(bottom = 35.dp)
+                                        )
+                                        LoadingIndicator(
+                                            animating = true,
+                                            modifier = Modifier.graphicsLayer { alpha = if (stateAnim) 1f else 0f },
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            indicatorSpacing = 5.dp,
+                                            animationType = AnimationType.Bounce,
+                                        )
+
+                                }
                                 }
                             }
                             is SplashState.SplashStateInitial -> {
@@ -231,9 +237,9 @@ fun SplashScreen(
 //                                    }
 //                                }
                             }
-                            is SplashState.SplashSuccessNavigate -> {
-
-                            }
+//                            is SplashState.SplashSuccessNavigate -> {
+//
+//                            }
                             is SplashState.SplashStateIdle -> {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally
@@ -243,11 +249,13 @@ fun SplashScreen(
                                         enter = fadeIn(animationSpec = tween(durationMillis = 2000)),
                                         exit = fadeOut(animationSpec = tween(durationMillis = 1))
                                     ) {
-                                        Text(
-                                            text = "Подключите наушники",
-                                            fontSize = 30.sp,
-                                            modifier = Modifier.padding(bottom = 35.dp)
-                                        )
+                                        Box(Modifier.height(100.dp)) {
+                                            Text(
+                                                text = "Подключите наушники",
+                                                fontSize = 30.sp,
+                                                modifier = Modifier.padding(bottom = 35.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -294,33 +302,12 @@ fun SplashScreen(
                                 }
                                 is SplashState.SplashStateInitial -> {
                                     Text(text = "")
-//                                    AnimatedVisibility(
-//                                        visibleState = stateSearch,
-//                                        enter = fadeIn(animationSpec = tween(durationMillis = 3000)),
-//                                        exit = fadeOut(animationSpec = tween(durationMillis = 1))
-//                                    ) {
-//                                        Text(
-//                                            text = "Найти наушники?",
-//                                            fontSize = 18.sp,
-//                                            modifier = Modifier
-//                                                .padding(bottom = 35.dp, start = 5.dp, end = 5.dp, top = 5.dp)
-//                                                .clickable(
-//                                                    interactionSource = MutableInteractionSource(),
-//                                                    indication = null,
-//                                                    onClick = {
-//                                                        stateSearch.targetState = false
-//                                                        stateAnim = true
-//                                                        viewModel.startSearchReceiver()
-//                                                    }
-//                                                )
-//                                        )
-//                                    }
                                 }
                                 is SplashState.SplashReceiverStartSearch -> {
                                     AnimatedVisibility(
-                                        visible = !stateSearch.targetState && !stateOpenBluetoothText.targetState,
-                                        enter = fadeIn(animationSpec = tween(durationMillis = 2000), initialAlpha = 0f),
-                                        exit = fadeOut(animationSpec = tween(durationMillis = 2000), targetAlpha = 0f)
+                                        visibleState = stateSearchProcess,
+                                        enter = fadeIn(animationSpec = tween(durationMillis = 2000)),
+                                        exit = fadeOut(animationSpec = tween(durationMillis = 1000))
                                     ) {
                                         Text(
                                             text = "Идет поиск...",
@@ -331,9 +318,9 @@ fun SplashScreen(
                                         )
                                     }
                                 }
-                                is SplashState.SplashSuccessNavigate -> {
-
-                                }
+//                                is SplashState.SplashSuccessNavigate -> {
+//
+//                                }
                                 is SplashState.SplashStateIdle -> {
                                     AnimatedVisibility(
                                         visibleState = stateSearch,

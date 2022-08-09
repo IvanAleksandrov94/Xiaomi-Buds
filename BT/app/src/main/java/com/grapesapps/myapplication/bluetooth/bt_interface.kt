@@ -33,7 +33,7 @@ interface IBluetoothSDKListener {
      * from action BluetoothUtils.ACTION_DEVICE_CONNECTED
      */
     fun onDeviceConnected(device: BluetoothDevice?, message: String)
-    fun onDeviceFoundConnected(device: BluetoothDevice?, message: String)
+  //  fun onDeviceFoundConnected(device: BluetoothDevice?, message: String)
 
     /**
      * from action BluetoothUtils.ACTION_MESSAGE_RECEIVED

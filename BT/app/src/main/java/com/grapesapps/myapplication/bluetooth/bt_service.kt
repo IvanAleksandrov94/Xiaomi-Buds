@@ -13,7 +13,6 @@ import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
-import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.wearable.*
@@ -22,18 +21,12 @@ import com.grapesapps.myapplication.R
 import com.grapesapps.myapplication.bluetooth.BluetoothBatteryCommands.percentList
 import com.grapesapps.myapplication.bluetooth.BluetoothBatteryCommands.percentListBattery
 import com.grapesapps.myapplication.entity.*
-import com.grapesapps.myapplication.vm.Event
-import com.grapesapps.myapplication.vm.Home
-import com.grapesapps.myapplication.vm.Splash
-import dagger.Provides
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.asFlow
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.*
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
@@ -56,6 +49,9 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         private const val NOTIFICATION_TITLE_DISCONNECTED =
             "Наушники не подключены"
     }
+
+    //device search
+    var isFoundedDeviceName = false
 
     // Service Binder
     private val binder = LocalBinder()
@@ -85,7 +81,6 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         super.onCreate()
         btManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         btAdapter = btManager.adapter
-        btAdapter.getProfileProxy(this, mProfileListener, BluetoothProfile.HEADSET)
         btDevice = btAdapter.bondedDevices?.firstOrNull { it.name == "Xiaomi Buds 3T Pro" }
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         context = this
@@ -116,6 +111,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
             stopForeground(true)
             return START_STICKY
         }
+
 
         /// Init Headphones connect
         initConnectionDevice()
@@ -192,7 +188,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                 )
                 return@launch
             }
-            binder.startDiscovery()
+
             var i = 0
             do {
                 try {
@@ -215,27 +211,25 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                 } catch (e: IOException) {
                     Log.e(TAG, "$${device.name} (${device.address}): BT Connect Error $e")
                 }
+
                 i++
                 delay(100L)
+//                if(i == 2){
+//                    pushBroadcastMessage(
+//                        BluetoothUtils.ACTION_DEVICE_INITIAL,
+//                        null,
+//                        "a"
+//                    )
+//                }
             } while (i < 2)
         }
     }
 
     private fun initConnectionDevice() {
         scopeService.launch(Dispatchers.IO) {
-            delay(1000L)
-            val d = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
-            var isFoundedDeviceName = false
-            for (i in d) {
-                if (i.productName == "Xiaomi Buds 3T Pro") {
-                    isFoundedDeviceName = true
-                    pushBroadcastMessage(
-                        BluetoothUtils.ACTION_DEVICE_FOUND_CONNECTED,
-                        null,
-                        "${i.productName}"
-                    )
-                }
-            }
+            // delay(500L)
+            btAdapter.getProfileProxy(context, mProfileListener, BluetoothProfile.HEADSET)
+            binder.startDiscovery()
 
             if (!btAdapter.isEnabled) {
                 pushBroadcastMessage(
@@ -244,17 +238,6 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                     "ACTION_BT_OFF"
                 )
                 startSystemBluetoothStateReceiver()
-            } else {
-                if (!isFoundedDeviceName) {
-                    pushBroadcastMessage(
-                        BluetoothUtils.ACTION_DEVICE_INITIAL,
-                        null,
-                        "a"
-                    )
-                    connectDevice(btDevice)
-                } else {
-                    connectDevice(btDevice)
-                }
             }
         }
     }
@@ -533,7 +516,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
 
         fun startSearchReceiver() = binder.startDiscovery()
 
-        fun connectDevice() = connectDevice(btDevice)
+        private fun connectDevice() = connectDevice(btDevice)
 
 
         fun send(command: List<Int>) {
@@ -581,11 +564,20 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                 Log.d(TAG, "${device?.name}")
                 Log.d(TAG, "${device?.address}")
                 if (device?.name == "Xiaomi Buds 3T Pro") {
-                    binder.stopDiscovery()
+                    //  binder.stopDiscovery()
                     btDevice = device
                     connectDevice(btDevice)
-                    // AcceptThread().start()
                 }
+            }
+            if (intent.action == "android.bluetooth.device.action.ACL_DISCONNECTED") {
+                if (btSocket?.isConnected == true) {
+                    btSocket?.close()
+                }
+                pushBroadcastMessage(
+                    BluetoothUtils.ACTION_DEVICE_INITIAL,
+                    null,
+                    "a"
+                )
             }
         }
     }
@@ -616,6 +608,9 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                         null,
                         "ACTION_BT_OFF"
                     )
+                    if (btSocket?.isConnected == true) {
+                        btSocket?.close()
+                    }
                     Log.e("systemBluetoothStateBroadcastReceiver", "BLUETOOTH_DISABLED")
                 }
             }
@@ -645,12 +640,53 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
             if (profile == BluetoothProfile.HEADSET) {
                 btHeadset = proxy as BluetoothHeadset
-                onStartCheckConnection()
+                val devices = btHeadset?.connectedDevices
+                val device = devices?.firstOrNull { it.name == "Xiaomi Buds 3T Pro" }
+                Log.e(TAG, "Bluetooth Headset: CONNECTED RESULT CONNECT $device")
+
+                val isConnected = btSocket?.isConnected ?: false
+
+                if(!isConnected){
+                    if (device == null) {
+                        pushBroadcastMessage(
+                            BluetoothUtils.ACTION_DEVICE_INITIAL,
+                            null,
+                            "a"
+                        )
+                    } else {
+                        connectDevice(btDevice)
+                        onCheckSurroundStatus()
+                    }
+                }
+
+//                if (btSocket?.isConnected == true) {
+//                  //  binder.send(BluetoothCommands.headsetInfo)
+////                    pushBroadcastMessage(
+////                        BluetoothUtils.ACTION_DEVICE_CONNECTED,
+////                        device,
+////                        device?.name
+////                    )
+//                } else {
+//                    if (device == null) {
+//                        pushBroadcastMessage(
+//                            BluetoothUtils.ACTION_DEVICE_INITIAL,
+//                            null,
+//                            "a"
+//                        )
+//                    } else {
+//                        connectDevice(btDevice)
+//                        onCheckSurroundStatus()
+//                    }
+//                }
+
             }
         }
 
         override fun onServiceDisconnected(profile: Int) {
             if (profile == BluetoothProfile.HEADSET) {
+                if (btSocket?.isConnected == true) {
+                    btSocket?.close()
+                }
                 btHeadset = null
                 Log.e(TAG, "Bluetooth Headset: DISCONNECTED")
             }
@@ -659,20 +695,16 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
 
 
     @SuppressLint("MissingPermission")
-    private fun onStartCheckConnection() {
+    private fun onCheckSurroundStatus() {
         val result = btHeadset?.sendVendorSpecificResultCode(
             btDevice,
             "+XIAOMI",
             "FF010201020101FF"
         )
 //        if (result == true) {
-//            pushBroadcastMessage(
-//                BluetoothUtils.ACTION_DEVICE_CONNECTED,
-//                null,
-//                "CONNECTED"
-//            )
+
 //        }
-        Log.e(TAG, "Bluetooth Headset: CONNECTED RESULT CONNECT $result")
+//        Log.e(TAG, "Bluetooth Headset: CONNECTED RESULT CONNECT $result")
 
     }
 

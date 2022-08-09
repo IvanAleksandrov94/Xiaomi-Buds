@@ -10,7 +10,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.media.audiofx.AudioEffect
 import android.media.audiofx.Equalizer
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -23,35 +22,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
-import androidx.lifecycle.lifecycleScope
-import com.google.android.gms.wearable.CapabilityClient
-import com.google.android.gms.wearable.Wearable
 import com.grapesapps.myapplication.bluetooth.BluetoothSDKListenerHelper
 import com.grapesapps.myapplication.bluetooth.BluetoothSDKService
 import com.grapesapps.myapplication.bluetooth.IBluetoothSDKListener
-import com.grapesapps.myapplication.model.SharedPrefManager
 import com.grapesapps.myapplication.ui.theme.BudsApplicationTheme
-import com.grapesapps.myapplication.vm.ClientDataViewModel
-import com.grapesapps.myapplication.vm.Home
+import com.grapesapps.myapplication.vm.HeadphoneVm
 import com.grapesapps.myapplication.vm.Splash
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.*
-import kotlinx.coroutines.tasks.await
 
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    // private lateinit var navController: NavHostController
-   // private lateinit var pref: SharedPrefManager
-
-    // Wear OS
-//    private val clientDataViewModel by viewModels<ClientDataViewModel>()
-//    private val dataClient by lazy { Wearable.getDataClient(this) }
-//    private val messageClient by lazy { Wearable.getMessageClient(this) }
-//    private val capabilityClient by lazy { Wearable.getCapabilityClient(this) }
-//    private val nodeClient by lazy { Wearable.getNodeClient(this) }
     private val splashVm by viewModels<Splash>()
-    private val headsetVm by viewModels<Home>()
+    private val headphoneVm by viewModels<HeadphoneVm>()
+
 
     private val mBluetoothListener: IBluetoothSDKListener = object : IBluetoothSDKListener {
 
@@ -69,13 +53,13 @@ class MainActivity : ComponentActivity() {
 
         }
 
-        override fun onDeviceFoundConnected(device: BluetoothDevice?, message: String) {
-            splashVm.onDeviceConnected(deviceName = message, deviceFounded = true)
-        }
+//        override fun onDeviceFoundConnected(device: BluetoothDevice?, message: String) {
+//            splashVm.onDeviceConnected(deviceName = message)
+//        }
 
         override fun onDeviceConnected(device: BluetoothDevice?, message: String) {
             Log.e("IBluetoothSDKListener", "onDeviceConnected $message")
-            splashVm.onDeviceConnected(message)
+            splashVm.onDeviceConnected(deviceName = message)
         }
 
 
@@ -117,23 +101,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         BluetoothSDKListenerHelper.registerBluetoothSDKListener(this, mBluetoothListener)
         //pref = SharedPrefManager(this)
 
-//        dataClient.addListener(clientDataViewModel)
-//        messageClient.addListener(clientDataViewModel)
-//        capabilityClient.addListener(
-//            clientDataViewModel,
-//            Uri.parse("wear://"),
-//            CapabilityClient.FILTER_REACHABLE
-//        )
 
         val notifyIntent = Intent(this, BluetoothSDKService::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            action = CHANNEL_START_ACTION
+            action = "START_ACTION"
         }
         startService(notifyIntent)
 
@@ -168,7 +144,10 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.background)
                 ) {
-                    NavHostScreen(splashVm = splashVm, headsetVm = headsetVm)
+                    NavHostScreen(
+                        splashVm = splashVm,
+                        headphoneVm = headphoneVm
+                    )
                 }
             }
         }
@@ -305,20 +284,6 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         unregisterReceiver(btClassicReceiver)
         BluetoothSDKListenerHelper.unregisterBluetoothSDKListener(applicationContext, mBluetoothListener)
-    }
-
-    companion object {
-        private const val TAG = "MainActivity"
-
-        private const val START_ACTIVITY_PATH = "/start-activity"
-        private const val COUNT_PATH = "/count"
-        private const val IMAGE_PATH = "/image"
-        private const val IMAGE_KEY = "photo"
-        private const val TIME_KEY = "time"
-        private const val COUNT_KEY = "count"
-        private const val CAMERA_CAPABILITY = "camera"
-        private const val CHANNEL_START_ACTION = "START_ACTION"
-
     }
 }
 

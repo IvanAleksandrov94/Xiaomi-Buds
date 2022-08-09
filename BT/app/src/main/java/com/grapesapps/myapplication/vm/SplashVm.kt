@@ -1,16 +1,21 @@
 package com.grapesapps.myapplication.vm
 
 import android.content.ComponentName
+import android.content.Context
 import android.content.ServiceConnection
 import android.os.IBinder
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.grapesapps.myapplication.BluetoothService
 import com.grapesapps.myapplication.bluetooth.BluetoothSDKService
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 
 sealed class SplashState {
@@ -24,14 +29,20 @@ sealed class SplashState {
         val deviceName: String
     ) : SplashState()
 
-    object SplashSuccessNavigate : SplashState()
+   // object SplashSuccessNavigate : SplashState()
 }
 
-class Splash : ViewModel() {
+@HiltViewModel
+class Splash @Inject constructor() : ViewModel() {
     private val viewState: MutableLiveData<SplashState?> =
         MutableLiveData(SplashState.SplashStateInitial)
-
     val viewStateSplash: LiveData<SplashState?> = viewState
+
+    private val viewStateNavigate: MutableLiveData<Boolean> =
+        MutableLiveData(false)
+
+    val viewStateSplashNavigate: LiveData<Boolean> = viewStateNavigate
+
 
     private val mBinder: MutableLiveData<BluetoothSDKService> = MutableLiveData<BluetoothSDKService>()
 
@@ -41,7 +52,8 @@ class Splash : ViewModel() {
             val binder = service as BluetoothSDKService.LocalBinder
             mBinder.value = binder.getService()
             if (!binder.isNotConnectedSocket()) {
-                viewState.postValue(SplashState.SplashSuccessNavigate)
+                viewStateNavigate.postValue(true)
+             //   viewState.postValue(SplashState.SplashSuccessNavigate)
             }
         }
 
@@ -55,6 +67,7 @@ class Splash : ViewModel() {
 
     fun load() {
         viewState.postValue(SplashState.SplashStateIdle)
+      //  viewStateNavigate.postValue(false)
     }
 
 
@@ -69,15 +82,12 @@ class Splash : ViewModel() {
     }
 
 
-    fun onDeviceConnected(deviceName: String, deviceFounded: Boolean = false) {
-//        if (deviceFounded) {
-//            viewState.postValue(SplashState.SplashSuccessNavigate)
-//        } else
-            viewModelScope.launch(Dispatchers.IO) {
-                viewState.postValue(SplashState.SplashSuccessConnected(deviceName = deviceName))
-                delay(2000L)
-                viewState.postValue(SplashState.SplashSuccessNavigate)
-            }
+    fun onDeviceConnected(deviceName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            viewState.postValue(SplashState.SplashSuccessConnected(deviceName = deviceName))
+            delay(700L)
+            viewStateNavigate.postValue(true)
+        }
     }
 
 
