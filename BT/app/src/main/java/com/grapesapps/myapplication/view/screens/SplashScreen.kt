@@ -1,13 +1,26 @@
 package com.grapesapps.myapplication.view.screens
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultRegistry
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.compiler.plugins.kotlin.EmptyFunctionMetrics.packageName
+import androidx.compose.compiler.plugins.kotlin.EmptyModuleMetrics.log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -26,19 +39,26 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
+import androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale
+import androidx.core.app.ActivityCompat.startActivityForResult
+import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.checkSelfPermission
 import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.Lifecycle
+import com.google.common.reflect.Reflection.getPackageName
 import com.grapesapps.myapplication.bluetooth.BluetoothSDKService
 import com.grapesapps.myapplication.ui.theme.BudsApplicationTheme
 import com.grapesapps.myapplication.view.navigation.Screen
 import com.grapesapps.myapplication.view.observeAsState
 import com.grapesapps.myapplication.vm.Splash
 import com.grapesapps.myapplication.vm.SplashState
+import com.grapesapps.myapplication.vm.SplashStatePermission
 import dev.olshevski.navigation.reimagined.NavController
-import dev.olshevski.navigation.reimagined.navigate
 import dev.olshevski.navigation.reimagined.replaceAll
 import kotlinx.coroutines.*
 
@@ -51,6 +71,7 @@ fun SplashScreen(
 ) {
     val state: State<SplashState?> = viewModel.viewStateSplash.observeAsState()
     val stateNavigate: State<Boolean?> = viewModel.viewStateSplashNavigate.observeAsState()
+    val statePermission: State<SplashStatePermission?> = viewModel.viewStateSplashPermission.observeAsState()
     val context = LocalContext.current
     val lifecycleStateObserver = LocalLifecycleOwner.current.lifecycle.observeAsState()
     val lifecycleState = lifecycleStateObserver.value
@@ -68,11 +89,68 @@ fun SplashScreen(
             )
         }
     }
+
+
+    val requestPermissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+
+                val result = permissions
+                    .filterKeys {
+                        it == Manifest.permission.BLUETOOTH_CONNECT
+                    }
+
+                val deniedList: List<String> = result.filter {
+                    !it.value
+                }.map {
+                    it.key
+                }
+                when {
+                    deniedList.isNotEmpty() -> {
+                        val map = deniedList.groupBy { permission ->
+                            if (shouldShowRequestPermissionRationale(
+                                    context as Activity,
+                                    permission
+                                )
+                            ) "DENIED" else "EXPLAINED"
+                        }
+                        map["DENIED"]?.let {
+                            print(it)
+                        }
+                        map["EXPLAINED"]?.let {
+                            if (statePermission.value is SplashStatePermission.SplashStatePermissionRequested) {
+                                Toast.makeText(
+                                    context,
+                                    "Предоставьте разрешение к обнаружению устройств поблизости",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                val intent = Intent(
+                                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    Uri.fromParts("package", context.packageName, null)
+                                )
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                startActivityForResult(context as Activity, intent, 1, Bundle())
+                            }
+                        }
+                    }
+                    else -> {
+                        viewModel.onChangePermission(SplashStatePermission.SplashStatePermissionGranted)
+                        viewModel.loadBeforeRequestPermission()
+                    }
+                }
+            } else {
+                Toast.makeText(context, "Предоставьте разрешение к обнаружению устройств поблизости", Toast.LENGTH_LONG)
+                    .show()
+            }
+        }
+
     LaunchedEffect(
         key1 = viewModel,
         block = {
             launch {
-            //    viewModel.load()
+                // requestPermissions()
                 bindBluetoothService()
             }
         }
@@ -81,20 +159,34 @@ fun SplashScreen(
     LaunchedEffect(key1 = lifecycleState) {
         when (lifecycleState) {
             Lifecycle.Event.ON_RESUME -> {
-                print("!!")
-            }
-            Lifecycle.Event.ON_CREATE -> {
-                print("!!")
-            }
-            Lifecycle.Event.ON_START -> {
-                print("!!")
-
-            }
-            Lifecycle.Event.ON_PAUSE -> {
-                print("!!")
-            }
-            Lifecycle.Event.ON_DESTROY -> {
-                print("!!")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    if (statePermission.value is SplashStatePermission.SplashStatePermissionRequested) {
+                        val isGranted = checkSelfPermission(
+                            context as Activity,
+                            Manifest.permission.BLUETOOTH_CONNECT
+                        )
+                        if (isGranted == 0) {
+                            viewModel.onChangePermission(SplashStatePermission.SplashStatePermissionGranted)
+                            viewModel.loadBeforeRequestPermission()
+                        } else {
+                            viewModel.onChangePermission(SplashStatePermission.SplashStatePermissionRequested)
+                        }
+                    }
+                    if (statePermission.value is SplashStatePermission.SplashStatePermissionInitial) {
+                        viewModel.onChangePermission(SplashStatePermission.SplashStatePermissionRequested)
+                        requestPermissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.BLUETOOTH_CONNECT,
+                                Manifest.permission.BLUETOOTH_ADMIN,
+                                Manifest.permission.BLUETOOTH,
+                                Manifest.permission.BLUETOOTH_SCAN,
+                                Manifest.permission.FOREGROUND_SERVICE,
+                                Manifest.permission.RECEIVE_BOOT_COMPLETED,
+                                Manifest.permission.WAKE_LOCK,
+                            )
+                        )
+                    }
+                }
             }
             else -> Unit
         }
@@ -137,19 +229,18 @@ fun SplashScreen(
     }
 
 //    var stateSearch by remember { mutableStateOf(true) }
-    val stateOpenBluetoothText  = remember {
+    val stateOpenBluetoothText = remember {
+        MutableTransitionState(false).apply {
+            targetState = true
+        }
+    }
+
+    val stateRequestPermission = remember {
         MutableTransitionState(false).apply {
             targetState = true
         }
     }
     var stateAnim by remember { mutableStateOf(true) }
-
-//    when (state.value) {
-//        is SplashState.SplashSuccessConnected -> {
-//            stateMainTextDeviceName.targetState = false
-//        }
-//        else -> {}
-//    }
 
     when (stateNavigate.value) {
         true -> {
@@ -171,6 +262,38 @@ fun SplashScreen(
 
                         Spacer(modifier = Modifier.padding(top = 100.dp))
                         when (val splashState = state.value) {
+                            is SplashState.SplashRequestPermission -> {
+                                AnimatedVisibility(
+                                    visibleState = stateRequestPermission,
+                                    enter = fadeIn(animationSpec = tween(durationMillis = 2000)),
+                                    exit = fadeOut(animationSpec = tween(durationMillis = 1))
+                                ) {
+                                    Box(
+                                        Modifier
+                                            .height(150.dp)
+                                            .padding(horizontal = 15.dp)
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Text(
+                                                text = "Предоставьте разрешения",
+                                                fontSize = 26.sp,
+                                                modifier = Modifier.padding(bottom = 35.dp),
+                                                textAlign = TextAlign.Center
+
+                                            )
+                                            Text(
+                                                text = "Чтобы подключить наушники необходимо дать доступ к устройствам по близости",
+                                                fontSize = 15.sp,
+                                                modifier = Modifier.padding(bottom = 35.dp),
+                                                textAlign = TextAlign.Center
+
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                             is SplashState.SplashBluetoothDisabled -> {
                                 AnimatedVisibility(
                                     visibleState = stateMainTextBluetooth,
@@ -191,12 +314,13 @@ fun SplashScreen(
                                     visibleState = stateMainTextDeviceName,
                                     enter = fadeIn(animationSpec = tween(durationMillis = 1000)),
                                 ) {
-                                    Box(Modifier.height(100.dp)){
-                                    Text(
-                                        text = splashState.deviceName,
-                                        fontSize = 30.sp,
-                                        modifier = Modifier.padding(bottom = 35.dp)
-                                    )}
+                                    Box(Modifier.height(100.dp)) {
+                                        Text(
+                                            text = splashState.deviceName,
+                                            fontSize = 30.sp,
+                                            modifier = Modifier.padding(bottom = 35.dp)
+                                        )
+                                    }
                                 }
                             }
                             is SplashState.SplashReceiverStartSearch -> {
@@ -217,7 +341,7 @@ fun SplashScreen(
                                             animationType = AnimationType.Bounce,
                                         )
 
-                                }
+                                    }
                                 }
                             }
                             is SplashState.SplashStateInitial -> {
@@ -268,7 +392,7 @@ fun SplashScreen(
                             }
                         }
 
-                        Log.e("STATE", "${state.value}" )
+                        Log.e("STATE", "${state.value}")
 
                         Column(
                             Modifier.height(100.dp),
@@ -318,9 +442,40 @@ fun SplashScreen(
                                         )
                                     }
                                 }
-//                                is SplashState.SplashSuccessNavigate -> {
-//
-//                                }
+                                is SplashState.SplashRequestPermission -> {
+                                    AnimatedVisibility(
+                                        visibleState = stateRequestPermission,
+                                        enter = fadeIn(animationSpec = tween(durationMillis = 3000)),
+                                        exit = fadeOut(animationSpec = tween(durationMillis = 1))
+                                    ) {
+                                        Text(
+                                            text = "Предоставить",
+                                            fontSize = 18.sp,
+                                            modifier = Modifier
+                                                .padding(bottom = 35.dp, start = 5.dp, end = 5.dp, top = 5.dp)
+                                                .clickable(
+                                                    interactionSource = MutableInteractionSource(),
+                                                    indication = null,
+                                                    onClick = {
+                                                        //  requestPermissions()
+                                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                                            requestPermissionLauncher.launch(
+                                                                arrayOf(
+                                                                    Manifest.permission.BLUETOOTH_CONNECT,
+                                                                    Manifest.permission.BLUETOOTH_ADMIN,
+                                                                    Manifest.permission.BLUETOOTH,
+                                                                    Manifest.permission.BLUETOOTH_SCAN,
+                                                                    Manifest.permission.FOREGROUND_SERVICE,
+                                                                    Manifest.permission.RECEIVE_BOOT_COMPLETED,
+                                                                    Manifest.permission.WAKE_LOCK,
+                                                                )
+                                                            )
+                                                        }
+                                                    }
+                                                )
+                                        )
+                                    }
+                                }
                                 is SplashState.SplashStateIdle -> {
                                     AnimatedVisibility(
                                         visibleState = stateSearch,

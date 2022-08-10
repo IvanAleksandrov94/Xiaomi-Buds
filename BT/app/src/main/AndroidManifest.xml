@@ -5,47 +5,50 @@
 
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
-    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
+        android:name=".BudsApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
+        android:extractNativeLibs="true"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication"
-        android:name=".BudsApp"
-        android:extractNativeLibs="true"
         tools:targetApi="31">
-<!--        <uses-library-->
-<!--            android:name="com.google.android.wearable"-->
-<!--            android:required="true" />-->
+        <!--        <uses-library-->
+        <!--            android:name="com.google.android.wearable"-->
+        <!--            android:required="true" />-->
         <service
             android:name=".bluetooth.BluetoothSDKService"
+            android:enabled="true"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTask"
             android:parentActivityName=".MainActivity"
             android:taskAffinity=""
-            android:launchMode="singleTask"
-            android:excludeFromRecents="true"
-            android:enabled="true"
-            android:theme="@style/Theme.MyApplication"
-            android:exported="false" />
+            android:theme="@style/Theme.MyApplication" />
         <activity
             android:name=".MainActivity"
+            android:excludeFromRecents="false"
+            android:exported="true"
+            android:launchMode="singleTask"
             android:parentActivityName=".MainActivity"
             android:taskAffinity=""
-            android:launchMode="singleTask"
-            android:exported="true"
-            android:excludeFromRecents="false"
             android:theme="@style/Theme.MyApplication">
 
             <intent-filter>

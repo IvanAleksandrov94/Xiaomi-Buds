@@ -60,4 +60,6 @@ interface IBluetoothSDKListener {
      */
     fun onDeviceNotFound()
 
+    fun onRequestPermission()
+
 }

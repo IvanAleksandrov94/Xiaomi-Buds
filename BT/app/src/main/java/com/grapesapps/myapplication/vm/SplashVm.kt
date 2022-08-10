@@ -19,6 +19,7 @@ import javax.inject.Inject
 
 
 sealed class SplashState {
+    object SplashRequestPermission : SplashState()
     object SplashStateInitial : SplashState()
     object SplashStateIdle : SplashState()
     object SplashBluetoothDisabled : SplashState()
@@ -28,8 +29,13 @@ sealed class SplashState {
     class SplashSuccessConnected(
         val deviceName: String
     ) : SplashState()
+}
 
-   // object SplashSuccessNavigate : SplashState()
+sealed class SplashStatePermission {
+    object SplashStatePermissionInitial : SplashStatePermission()
+    object SplashStatePermissionRequested : SplashStatePermission()
+    object SplashStatePermissionDenied : SplashStatePermission()
+    object SplashStatePermissionGranted : SplashStatePermission()
 }
 
 @HiltViewModel
@@ -37,11 +43,13 @@ class Splash @Inject constructor() : ViewModel() {
     private val viewState: MutableLiveData<SplashState?> =
         MutableLiveData(SplashState.SplashStateInitial)
     val viewStateSplash: LiveData<SplashState?> = viewState
-
     private val viewStateNavigate: MutableLiveData<Boolean> =
         MutableLiveData(false)
-
     val viewStateSplashNavigate: LiveData<Boolean> = viewStateNavigate
+
+    private val viewStatePermission: MutableLiveData<SplashStatePermission> =
+        MutableLiveData(SplashStatePermission.SplashStatePermissionInitial)
+    val viewStateSplashPermission: LiveData<SplashStatePermission> = viewStatePermission
 
 
     private val mBinder: MutableLiveData<BluetoothSDKService> = MutableLiveData<BluetoothSDKService>()
@@ -53,7 +61,7 @@ class Splash @Inject constructor() : ViewModel() {
             mBinder.value = binder.getService()
             if (!binder.isNotConnectedSocket()) {
                 viewStateNavigate.postValue(true)
-             //   viewState.postValue(SplashState.SplashSuccessNavigate)
+                //   viewState.postValue(SplashState.SplashSuccessNavigate)
             }
         }
 
@@ -67,9 +75,13 @@ class Splash @Inject constructor() : ViewModel() {
 
     fun load() {
         viewState.postValue(SplashState.SplashStateIdle)
-      //  viewStateNavigate.postValue(false)
+        //  viewStateNavigate.postValue(false)
     }
 
+    fun loadBeforeRequestPermission() = viewState.postValue(SplashState.SplashReceiverStartSearch)
+
+
+    fun onRequestPermission() = viewState.postValue(SplashState.SplashRequestPermission)
 
     fun onDeviceNotFound() = viewState.postValue(SplashState.SplashDeviceNotFound)
 
@@ -103,5 +115,9 @@ class Splash @Inject constructor() : ViewModel() {
                 viewState.postValue(SplashState.SplashReceiverEndSearch)
             }
         }
+    }
+
+    fun onChangePermission(permission: SplashStatePermission) {
+        viewStatePermission.postValue(permission)
     }
 }

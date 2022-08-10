@@ -1,5 +1,6 @@
 package com.grapesapps.myapplication.bluetooth
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.*
 import android.bluetooth.*
@@ -7,12 +8,14 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.wearable.*
@@ -51,7 +54,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
     }
 
     //device search
-    var isFoundedDeviceName = false
+    //var isFoundedDeviceName = false
 
     // Service Binder
     private val binder = LocalBinder()
@@ -79,6 +82,10 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
     @SuppressLint("MissingPermission")
     override fun onCreate() {
         super.onCreate()
+        val isDenied = serviceRequestPermission()
+        if (isDenied) {
+            return
+        }
         btManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         btAdapter = btManager.adapter
         btDevice = btAdapter.bondedDevices?.firstOrNull { it.name == "Xiaomi Buds 3T Pro" }
@@ -179,6 +186,10 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
 
     @SuppressLint("MissingPermission")
     fun connectDevice(device: BluetoothDevice?) {
+        val isDenied = serviceRequestPermission()
+        if (isDenied) {
+            return
+        }
         scopeService.launch(Dispatchers.IO) {
             if (device == null) {
                 pushBroadcastMessage(
@@ -192,6 +203,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
             var i = 0
             do {
                 try {
+
                     btSocket = device.createRfcommSocketToServiceRecord(UUID.fromString(btUuid))
                     val isConnected = btSocket?.isConnected ?: false
                     if (isConnected) {
@@ -225,7 +237,28 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         }
     }
 
+    private fun serviceRequestPermission(): Boolean {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            pushBroadcastMessage(
+                BluetoothUtils.ACTION_REQUEST_PERMISSION,
+                null,
+                "ACTION_REQUEST_PERMISSION"
+            )
+
+            return true
+        }
+        return false
+    }
+
     private fun initConnectionDevice() {
+        val isDenied = serviceRequestPermission()
+        if (isDenied) {
+            return
+        }
         scopeService.launch(Dispatchers.IO) {
             // delay(500L)
             btAdapter.getProfileProxy(context, mProfileListener, BluetoothProfile.HEADSET)
@@ -248,6 +281,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
 
         @SuppressLint("MissingPermission")
         fun connect() {
+
             socket.connect()
             btSocket = socket
             listenData()
@@ -533,6 +567,10 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
 
         @SuppressLint("MissingPermission")
         fun startDiscovery() {
+            val isDenied = serviceRequestPermission()
+            if (isDenied) {
+                return
+            }
             val filter = IntentFilter(BluetoothDevice.ACTION_FOUND)
             filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
             filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
@@ -543,6 +581,10 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
 
         @SuppressLint("MissingPermission")
         fun stopDiscovery() {
+            val isDenied = serviceRequestPermission()
+            if (isDenied) {
+                return
+            }
             btAdapter.cancelDiscovery()
             pushBroadcastMessage(BluetoothUtils.ACTION_DISCOVERY_STOPPED, null, null)
         }
@@ -556,6 +598,10 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
 
         @SuppressLint("MissingPermission")
         override fun onReceive(context: Context, intent: Intent) {
+            val isDenied = serviceRequestPermission()
+            if (isDenied) {
+                return
+            }
             Log.e("discoveryBroadcastReceiver", "${intent.action}")
             if (intent.action == "android.bluetooth.device.action.ACL_CONNECTED") {
                 Log.e("discoveryBroadcastReceiver", "${intent.action}")
@@ -592,6 +638,10 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
 
         @SuppressLint("MissingPermission")
         override fun onReceive(context: Context, intent: Intent) {
+            val isDenied = serviceRequestPermission()
+            if (isDenied) {
+                return
+            }
             Log.e("systemBluetoothStateBroadcastReceiver", "${intent.action}")
             if (intent.action == BluetoothAdapter.ACTION_STATE_CHANGED) {
                 if (intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1) == BluetoothAdapter.STATE_ON) {
@@ -638,6 +688,10 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
     private var mProfileListener: BluetoothProfile.ServiceListener = object : BluetoothProfile.ServiceListener {
         @SuppressLint("MissingPermission")
         override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
+            val isDenied = serviceRequestPermission()
+            if (isDenied) {
+                return
+            }
             if (profile == BluetoothProfile.HEADSET) {
                 btHeadset = proxy as BluetoothHeadset
                 val devices = btHeadset?.connectedDevices
@@ -646,7 +700,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
 
                 val isConnected = btSocket?.isConnected ?: false
 
-                if(!isConnected){
+                if (!isConnected) {
                     if (device == null) {
                         pushBroadcastMessage(
                             BluetoothUtils.ACTION_DEVICE_INITIAL,

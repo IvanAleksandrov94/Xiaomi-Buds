@@ -73,6 +73,9 @@ class BluetoothSDKListenerHelper {
                     BluetoothUtils.ACTION_DEVICE_INITIAL -> {
                         mGlobalListener?.onBluetoothInitial()
                     }
+                    BluetoothUtils.ACTION_REQUEST_PERMISSION -> {
+                        mGlobalListener?.onRequestPermission()
+                    }
                 }
             }
         }
@@ -91,13 +94,14 @@ class BluetoothSDKListenerHelper {
                     it.addAction(BluetoothUtils.ACTION_DISCOVERY_STARTED)
                     it.addAction(BluetoothUtils.ACTION_DISCOVERY_STOPPED)
                     it.addAction(BluetoothUtils.ACTION_DEVICE_CONNECTED)
-                   // it.addAction(BluetoothUtils.ACTION_DEVICE_FOUND_CONNECTED)
+                    // it.addAction(BluetoothUtils.ACTION_DEVICE_FOUND_CONNECTED)
                     it.addAction(BluetoothUtils.ACTION_MESSAGE_RECEIVED)
                     it.addAction(BluetoothUtils.ACTION_MESSAGE_SENT)
                     it.addAction(BluetoothUtils.ACTION_CONNECTION_ERROR)
                     it.addAction(BluetoothUtils.ACTION_DEVICE_DISCONNECTED)
                     it.addAction(BluetoothUtils.ACTION_DEVICE_NOT_FOUND)
                     it.addAction(BluetoothUtils.ACTION_DEVICE_INITIAL)
+                    it.addAction(BluetoothUtils.ACTION_REQUEST_PERMISSION)
 
                 }
 
