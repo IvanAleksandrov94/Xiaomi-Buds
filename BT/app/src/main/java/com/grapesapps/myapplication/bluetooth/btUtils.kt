@@ -2,6 +2,7 @@ package com.grapesapps.myapplication.bluetooth
 
 class BluetoothUtils {
     companion object {
+        const val ACTION_DATA_FROM_HEADPHONES = "ACTION_DATA_FROM_HEADPHONES"
         const val ACTION_REQUEST_PERMISSION = "ACTION_REQUEST_PERMISSION"
         const val ACTION_REQUEST_PERMANENT_DENIED_PERMISSION = "ACTION_REQUEST_PERMANENT_DENIED_PERMISSION"
         const val ACTION_BT_ON = "ACTION_BT_ON"
@@ -19,6 +20,7 @@ class BluetoothUtils {
         const val ACTION_CONNECTION_ERROR = "ACTION_CONNECTION_ERROR"
         const val EXTRA_DEVICE = "EXTRA_DEVICE"
         const val EXTRA_MESSAGE = "EXTRA_MESSAGE"
+        const val EXTRA_DATA = "EXTRA_DATA"
     }
 }
 

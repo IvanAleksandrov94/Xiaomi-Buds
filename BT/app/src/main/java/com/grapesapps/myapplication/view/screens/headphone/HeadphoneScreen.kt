@@ -2,6 +2,7 @@ package com.grapesapps.myapplication.view.screens.headphone
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -72,7 +73,8 @@ fun HeadphoneScreen(
         block = {
             launch {
                 bindBluetoothService()
-                viewModel
+                viewModel.load()
+//                viewModel.viewStateHeadphone.
             }
         }
     )
@@ -81,7 +83,7 @@ fun HeadphoneScreen(
         Scaffold(
             content = { contentPadding ->
                 Box(
-                  //  modifier = Modifier.padding(contentPadding)
+                    //  modifier = Modifier.padding(contentPadding)
                 ) {
                     LazyColumn(
                         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -109,13 +111,20 @@ fun HeadphoneScreen(
                                     scrollState.firstVisibleItemIndex >= 2
                                 }
                             }
-//                            HeadSetInfo(
-//                                firstItemVisible,
-//                                state.isConnected,
-//                                l = state.leftHeadsetStatus,
-//                                r = state.rightHeadsetStatus,
-//                                c = state.caseHeadsetStatus,
-//                            )
+                            Log.e("STATE", "${state.value}")
+                            when (val state = state.value) {
+                                is HeadphoneState.HeadphoneStateLoaded -> {
+                                    HeadSetInfo(
+                                        firstItemVisible,
+                                        state.isConnected,
+                                        l = state.leftHeadsetStatus,
+                                        r = state.rightHeadsetStatus,
+                                        c = state.caseHeadsetStatus,
+                                    )
+                                }
+                                else -> {}
+                            }
+
                         }
                         item {
                             Card(
@@ -124,61 +133,66 @@ fun HeadphoneScreen(
                             ) {
                                 Column(Modifier.fillMaxSize()) {
                                     Text("Noise Control", Modifier.padding(15.dp), fontSize = 22.sp)
-//                                    HeadphoneModeControl(
-//                                        isConnected = state.isConnected,
-//                                        mainHeadsetValue = state.mainHeadsetValue,
-//                                        onCheckedChange = {
-//                                            viewModel.changeMainSetting(it, state)
-//                                        }
-//                                    )
-//                                    when (state.headsetStatus?.setting) {
-//                                        HeadsetMainSetting.Noise -> {
-//                                            NoiseCancellationControl(
-//                                                value = state.headsetStatus.value,
-//                                                onCheckedChange = {
-//                                                    TODO("ВЫБОР ШУМОДАВА")
-//                                                    it
-//                                                    // viewModel.changeMainSetting(it, state)
-//                                                    //selectedNoise = it
-//                                                }
-//                                            )
-//                                        }
-//
-//                                        HeadsetMainSetting.Transparency -> {
-//                                            Column() {
-//                                                //  switchChecked = state.headsetStatus.value == 1
-//                                                Row(
-//                                                    modifier = Modifier
-//                                                        .fillMaxWidth()
-//                                                        .padding(
-//                                                            start = 15.dp,
-//                                                            end = 15.dp,
-//                                                            top = 10.dp,
-//                                                            bottom = 10.dp
-//                                                        ),
-//                                                    horizontalArrangement = Arrangement.SpaceBetween,
-//                                                    verticalAlignment = Alignment.CenterVertically,
-//                                                ) {
-//                                                    Text("Услиление голоса", fontSize = 14.sp)
-//                                                    Switch(
-//                                                        modifier = Modifier.scale(0.8f),
-//                                                        checked = false,
-//                                                        colors = SwitchDefaults.colors(),
-//                                                        onCheckedChange = {
-//                                                            //  viewModel.changeMainSetting(it, state)
-//                                                            // switchChecked = it
-//                                                        }
-//
-//                                                    )
-//                                                }
-//                                                Divider(
-//                                                    color = MaterialTheme.colorScheme.onSecondary,
-//                                                    thickness = 1.5.dp
-//                                                )
-//                                            }
-//                                        }
-//                                        else -> Unit
-//                                    }
+                                    when (val state = state.value) {
+                                        is HeadphoneState.HeadphoneStateLoaded -> {
+                                            HeadphoneModeControl(
+                                                isConnected = state.isConnected,
+                                                mainHeadsetValue = state.mainHeadsetValue,
+                                                onCheckedChange = {
+                                                    viewModel.changeMainSetting(it, state)
+                                                }
+                                            )
+                                            when (state.headsetStatus?.setting) {
+                                                HeadsetMainSetting.Noise -> {
+                                                    NoiseCancellationControl(
+                                                        value = state.headsetStatus.value,
+                                                        onCheckedChange = {
+                                                            TODO("ВЫБОР ШУМОДАВА")
+                                                            it
+                                                            // viewModel.changeMainSetting(it, state)
+                                                            //selectedNoise = it
+                                                        }
+                                                    )
+                                                }
+
+                                                HeadsetMainSetting.Transparency -> {
+                                                    Column() {
+                                                        //  switchChecked = state.headsetStatus.value == 1
+                                                        Row(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .padding(
+                                                                    start = 15.dp,
+                                                                    end = 15.dp,
+                                                                    top = 10.dp,
+                                                                    bottom = 10.dp
+                                                                ),
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                        ) {
+                                                            Text("Услиление голоса", fontSize = 14.sp)
+                                                            Switch(
+                                                                modifier = Modifier.scale(0.8f),
+                                                                checked = false,
+                                                                colors = SwitchDefaults.colors(),
+                                                                onCheckedChange = {
+                                                                    //  viewModel.changeMainSetting(it, state)
+                                                                    // switchChecked = it
+                                                                }
+
+                                                            )
+                                                        }
+                                                        Divider(
+                                                            color = MaterialTheme.colorScheme.onSecondary,
+                                                            thickness = 1.5.dp
+                                                        )
+                                                    }
+                                                }
+                                                else -> Unit
+                                            }
+                                        }
+                                        else -> {}
+                                    }
 
                                     Text(
                                         "Пространственное звучание",
@@ -186,6 +200,26 @@ fun HeadphoneScreen(
                                         fontSize = 15.sp,
                                         color = MaterialTheme.colorScheme.primary
                                     )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 15.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text("Объемный звук", fontSize = 14.sp)
+                                        Switch(
+                                            modifier = Modifier.scale(0.8f),
+                                            checked = switchChecked,
+                                            colors = SwitchDefaults.colors(
+
+                                            ),
+                                            onCheckedChange = {
+                                                viewModel.onSelectSurroundAudio(isEnabled = it)
+                                            }
+
+                                        )
+                                    }
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -201,33 +235,35 @@ fun HeadphoneScreen(
 
                                             ),
                                             onCheckedChange = {
-                                                if (it) {
-                                                    GlobalScope.launch(Dispatchers.IO) {
-
-//                                                        val result = btHeadset.sendVendorSpecificResultCode(
-//                                                            btDevice,
-//                                                            "+XIAOMI",
-//                                                            "FF01020103020501FF"
-//                                                        )
-//                                                        Log.e("SelectSpectral", "Send result $result")
-
-                                                    }
-
-
-                                                } else {
-//                                                    val result = btHeadset.sendVendorSpecificResultCode(
-//                                                        btDevice,
-//                                                        "+XIAOMI",
-//                                                        "FF01020103020500FF"
-//                                                    )
-//
-//                                                    Log.e("SelectSpectral", "Send result $result")
-                                                }
-                                                //switchChecked = it
-                                                //  viewModel.onSelectSpectralAudio()
-                                                // switchChecked = it
+                                                viewModel.onSelectSurroundAudio(isEnabled = it)
                                             }
 
+                                        )
+                                    }
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(start = 15.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Column(
+                                        ) {
+                                            Text("Улучшить объемный звук [BETA]", fontSize = 14.sp)
+                                            Text("Может работать нестабильно и не со всеми плеерами", fontSize = 10.sp)
+                                            Text("Необходимо будет перезапустить текущий плеер", fontSize = 10.sp)
+                                        }
+                                        Switch(
+                                            modifier = Modifier
+                                                .scale(0.8f)
+                                                .padding(end = 15.dp),
+                                            checked = switchChecked,
+                                            colors = SwitchDefaults.colors(
+
+                                            ),
+                                            onCheckedChange = {
+                                                viewModel.onSelectSurroundAudio(isEnabled = it)
+                                            }
                                         )
                                     }
                                     Divider(
@@ -256,7 +292,7 @@ fun HeadphoneScreen(
 
                                             ),
                                             onCheckedChange = {
-                                              //  viewModel.onSelectAutoSearchEar()
+                                                viewModel.onSelectAutoSearchEar(isEnabled = it)
                                                 //  switchChecked = it
                                             }
 
@@ -277,99 +313,8 @@ fun HeadphoneScreen(
 
                                             ),
                                             onCheckedChange = {
-                                              //  viewModel.onSelectAutoPhoneAnswer()
+                                                viewModel.onSelectAutoPhoneAnswer(isEnabled = it)
                                                 //   switchChecked = it
-                                            }
-
-                                        )
-                                    }
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 15.dp, vertical = 0.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Text("Виджет в шторке уведомлений", fontSize = 14.sp)
-                                        Switch(
-                                            modifier = Modifier.scale(0.8f),
-                                            checked = false,
-                                            colors = SwitchDefaults.colors(
-
-                                            ),
-                                            onCheckedChange = {
-
-                                            }
-
-                                        )
-                                    }
-                                    Divider(
-                                        Modifier.padding(top = 15.dp),
-                                        color = MaterialTheme.colorScheme.onSecondary,
-                                        thickness = 1.5.dp
-                                    )
-                                    Text(
-                                        "Свойства",
-                                        Modifier.padding(start = 15.dp, end = 15.dp, top = 20.dp, bottom = 5.dp),
-                                        fontSize = 15.sp,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 15.dp, vertical = 0.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Text("Абсолютная громкость", fontSize = 14.sp)
-                                        Switch(
-                                            modifier = Modifier.scale(0.8f),
-                                            checked = false,
-                                            colors = SwitchDefaults.colors(
-
-                                            ),
-                                            onCheckedChange = {
-                                                //   switchChecked = it
-                                            }
-
-                                        )
-                                    }
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 15.dp, vertical = 0.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Text("LHDC", fontSize = 14.sp)
-                                        Switch(
-                                            modifier = Modifier.scale(0.8f),
-                                            checked = false,
-                                            colors = SwitchDefaults.colors(
-
-                                            ),
-                                            onCheckedChange = {
-                                                //   switchChecked = it
-                                            }
-
-                                        )
-                                    }
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 15.dp, vertical = 0.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Text("Режим низкой задержки", fontSize = 14.sp)
-                                        Switch(
-                                            modifier = Modifier.scale(0.8f),
-                                            checked = false,
-                                            colors = SwitchDefaults.colors(
-
-                                            ),
-                                            onCheckedChange = {
-                                                //switchChecked = it
                                             }
 
                                         )
@@ -410,28 +355,53 @@ fun HeadphoneScreen(
                                 }
                             }
                         }
-//                        if (state.fwInfo != null) {
-//                            item {
-//                                Text(
-//                                    "Версия прошивки ${state.fwInfo.version}",
-//                                    modifier = Modifier.padding(start = 15.dp, end = 15.dp, top = 10.dp, bottom = 5.dp),
-//                                    fontSize = 12.sp,
-//                                    textAlign = TextAlign.Center
-//                                )
-//                            }
-//                        }
                         item {
-                            TextButton(
-                                modifier = Modifier.padding(start = 5.dp, end = 15.dp, top = 30.dp, bottom = 40.dp),
-                                //  color = Color.Red,
-                                onClick = {}) {
-                                Text(
-                                    "Удалить устройство",
-                                    fontSize = 16.sp,
-                                    color = Color.Red,
-                                    textAlign = TextAlign.Center
-                                )
+                            Text(
+                                "Отменить сопряжение",
+                                fontSize = 16.sp,
+                                color = Color.White,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 5.dp, end = 15.dp, top = 70.dp, bottom = 15.dp),
+                            )
+
+                        }
+                        item {
+
+                            Text(
+                                "Удалить устройство",
+                                fontSize = 16.sp,
+                                color = Color.Red,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 5.dp, end = 15.dp),
+                            )
+
+                        }
+                        when (val state = state.value) {
+                            is HeadphoneState.HeadphoneStateLoaded -> {
+                                if (state.fwInfo != null) {
+                                    item {
+                                        Text(
+                                            "Версия прошивки ${state.fwInfo.version}",
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .align(Alignment.Center)
+                                                .padding(
+                                                    start = 15.dp,
+                                                    end = 15.dp,
+                                                    top = 10.dp,
+                                                    bottom = 40.dp
+                                                ),
+                                            fontSize = 12.sp,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
                             }
+                            else -> {}
                         }
                     }
                 }

@@ -119,12 +119,12 @@ fun SplashScreen(
                         }
                         map["DENIED"]?.let {
                             isRequestedPermission = true
-                            viewModel.onRequestPermission()
+                           // viewModel.onRequestPermission()
                             print(it)
                         }
                         map["EXPLAINED"]?.let {
                             isRequestedPermission = true
-                            viewModel.onRequestPermission()
+                           // viewModel.onRequestPermission()
                             if (viewModel.viewStateSplashPermission.value is SplashStatePermission.SplashStatePermissionRequested) {
                                 Toast.makeText(
                                     context as Activity,
@@ -143,7 +143,7 @@ fun SplashScreen(
                     else -> {
                         viewModel.onChangePermission(SplashStatePermission.SplashStatePermissionGranted)
                         if (isRequestedPermission) {
-                            viewModel.loadBeforeRequestPermission()
+                            viewModel.load()
                         }
                     }
                 }
@@ -169,8 +169,6 @@ fun SplashScreen(
                     isRequestedPermission = true
                     viewModel.onRequestPermission()
                 }
-                // requestPermissions()
-                //   bindBluetoothService()
             }
         }
     )
@@ -707,47 +705,3 @@ private fun LoadingDot(
             .background(color = color)
     )
 }
-//
-//@Preview(widthDp = 360, heightDp = 360)
-//@Composable
-//private fun PreviewLoadingButton() {
-//    LoadingButtonTheme {
-//        var loading by remember {
-//            mutableStateOf(false)
-//        }
-//        Surface(modifier = Modifier.fillMaxSize()) {
-//            LoadingButton(
-//                onClick = { loading = !loading },
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .padding(all = 16.dp),
-//                loading = loading,
-//            ) {
-//                Text(
-//                    text = "Refresh"
-//                )
-//            }
-//        }
-//    }
-//}
-//
-//@Preview(widthDp = 200, heightDp = 200)
-//@Composable
-//fun IconPreview() {
-//    LoadingButtonTheme {
-//        Surface(modifier = Modifier.fillMaxSize()) {
-//            Box(
-//                modifier = Modifier.fillMaxSize(),
-//                contentAlignment = Alignment.Center,
-//            ) {
-//                Icon(
-//                    Icons.Default.Add,
-//                    modifier = Modifier
-//                        .width(100.dp)
-//                        .aspectRatio(1f),
-//                    contentDescription = null,
-//                )
-//            }
-//        }
-//    }
-//}

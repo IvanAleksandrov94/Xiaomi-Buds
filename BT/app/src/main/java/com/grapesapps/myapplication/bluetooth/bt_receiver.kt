@@ -32,8 +32,16 @@ class BluetoothSDKListenerHelper {
                 val device =
                     intent?.getParcelableExtra<BluetoothDevice>(BluetoothUtils.EXTRA_DEVICE)
                 val message = intent?.getStringExtra(BluetoothUtils.EXTRA_MESSAGE)
+                val dataFromHeadset = intent?.getByteArrayExtra(BluetoothUtils.EXTRA_DATA)
                 Log.e("BluetoothUtilsINTENT", "${intent?.action}")
                 when (intent?.action) {
+                    BluetoothUtils.ACTION_DATA_FROM_HEADPHONES -> {
+                        mGlobalListener?.onDataFromHeadPhones(
+                            device = device,
+                            isSupportedSurround = false,
+                            dataFromHeadset = dataFromHeadset
+                        )
+                    }
                     BluetoothUtils.ACTION_DEVICE_FOUND -> {
                         mGlobalListener?.onDeviceDiscovered(device)
                     }
@@ -91,6 +99,7 @@ class BluetoothSDKListenerHelper {
                 mBluetoothSDKBroadcastReceiver = BluetoothSDKBroadcastReceiver()
 
                 val intentFilter = IntentFilter().also {
+                    it.addAction(BluetoothUtils.ACTION_DATA_FROM_HEADPHONES)
                     it.addAction(BluetoothUtils.ACTION_BT_OFF)
                     it.addAction(BluetoothUtils.ACTION_BT_ON)
                     it.addAction(BluetoothUtils.ACTION_DEVICE_FOUND)

@@ -1,6 +1,7 @@
 package com.grapesapps.myapplication
 
 import android.app.Application
+import android.content.Intent
 import android.util.Log
 import androidx.annotation.StringRes
 import androidx.compose.runtime.mutableStateListOf
@@ -27,6 +28,7 @@ sealed class WearState {
     ) : WearState()
 
 }
+
 class ClientDataViewModel(
     application: Application
 ) :
@@ -34,6 +36,10 @@ class ClientDataViewModel(
     DataClient.OnDataChangedListener,
     MessageClient.OnMessageReceivedListener,
     CapabilityClient.OnCapabilityChangedListener {
+
+    companion object {
+        private const val WATCH_UPDATE_INFO = "/watch_update"
+    }
 
     private val _events = mutableStateListOf<Event>()
     private val viewState: MutableLiveData<WearState> = MutableLiveData(WearState.WearStateInitial)
@@ -62,12 +68,14 @@ class ClientDataViewModel(
     }
 
     override fun onMessageReceived(messageEvent: MessageEvent) {
-        _events.add(
-            Event(
-                title = R.string.message,
-                text = messageEvent.toString()
-            )
-        )
+        Log.e("EVENTS", messageEvent.path)
+        when (messageEvent.path) {
+            WATCH_UPDATE_INFO -> {
+                Log.e("WATCH_UPDATE_INFO", "${messageEvent.data.map { it }}")
+            }
+        }
+
+
     }
 
     override fun onCapabilityChanged(capabilityInfo: CapabilityInfo) {

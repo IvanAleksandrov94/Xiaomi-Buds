@@ -23,13 +23,16 @@ import com.grapesapps.myapplication.MainActivity
 import com.grapesapps.myapplication.R
 import com.grapesapps.myapplication.bluetooth.BluetoothBatteryCommands.percentList
 import com.grapesapps.myapplication.bluetooth.BluetoothBatteryCommands.percentListBattery
-import com.grapesapps.myapplication.entity.*
+import com.grapesapps.myapplication.entity.FirmwareInfo
+import com.grapesapps.myapplication.entity.HeadsetBatteryStatus
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import kotlinx.coroutines.tasks.await
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.*
+
 
 @AndroidEntryPoint
 class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
@@ -51,6 +54,8 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
             "Наушники подключены"
         private const val NOTIFICATION_TITLE_DISCONNECTED =
             "Наушники не подключены"
+        private const val WATCH_UPDATE_INFO = "/watch_update"
+
     }
 
     //device search
@@ -78,6 +83,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
     private val nodeClient by lazy { Wearable.getNodeClient(this) }
 
     private val btUuid = "0000fd2d-0000-1000-8000-00805f9b34fb"
+
 
     @SuppressLint("MissingPermission")
     override fun onCreate() {
@@ -260,7 +266,6 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
             return
         }
         scopeService.launch(Dispatchers.IO) {
-            // delay(500L)
             btAdapter.getProfileProxy(context, mProfileListener, BluetoothProfile.HEADSET)
             binder.startDiscovery()
 
@@ -332,6 +337,13 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                             mutableTempBuffer[25] = last
                             /// btService.sendServiceMessage(mutableList.toByteArray())
                         } else {
+                            pushBroadcastMessage(
+                                BluetoothUtils.ACTION_DATA_FROM_HEADPHONES,
+                                btDevice,
+                                "ACTION_DATA_FROM_HEADPHONES",
+                                dataFromHeadset = tempBuffer
+                            )
+                            sendToWatch(tempBuffer)
                             // LOGS
                             Log.i(TAG, "!!!!!!!")
                             val parsed = tempBuffer.joinToString(" ") { "%02x".format(it) }
@@ -359,6 +371,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                                             "VM Bluetooth",
                                             "${headsetMode.toInt()} ОТКЛЮЧЕНО SIZE:${tempBuffer.size}"
                                         )
+
 //                                        if (state.value is HomeState.HomeStateLoaded) {
 //                                            val headsetStatus =
 //                                                HeadsetSettingStatus(HeadsetMainSetting.Off, tempBuffer[24].toInt())
@@ -539,6 +552,63 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
      */
     inner class LocalBinder : Binder() {
 
+        /// команды
+
+
+        fun activateOffMode() = send(BluetoothCommands.off)
+        fun activateNoiseMode() = send(BluetoothCommands.noise)
+        fun activateTransparencyMode() = send(BluetoothCommands.transparency)
+
+        fun activateAutoSearchEarOn() = send(BluetoothCommands.autoSearchEarOn)
+        fun activateAutoSearchEarOff() = send(BluetoothCommands.autoSearchEarOff)
+        fun activateAutoPhoneAnswerOn() = send(BluetoothCommands.autoPhoneAnswerOn)
+        fun activateAutoPhoneAnswerOff() = send(BluetoothCommands.autoPhoneAnswerOff)
+        fun activateSearchLeftHeadphoneOn() = send(BluetoothCommands.searchLeftHeadphoneOn)
+        fun activateSearchLeftHeadphoneOff() = send(BluetoothCommands.searchLeftHeadphoneOff)
+        fun activateSearchRightHeadphoneOn() = send(BluetoothCommands.searchRightHeadphoneOn)
+        fun activateSearchRightHeadphoneOff() = send(BluetoothCommands.searchRightHeadphoneOff)
+        fun activateSearchAllHeadphoneOn() = send(BluetoothCommands.searchAllHeadphoneOn)
+        fun activateSearchAllHeadphoneOff() = send(BluetoothCommands.searchAllHeadphoneOff)
+
+        fun getHeadsetInfo() = send(BluetoothCommands.headsetInfo)
+        fun checkHeadsetMode() = send(BluetoothCommands.checkHeadsetMode)
+        fun activateHeadTest() {
+            send(BluetoothCommands.startHeadTest)
+            // проверка прилегания наушников
+            //fe dc ba c7 f4 00 06 0a 04 00 06 01 01 ef
+            //fe dc ba c7 f4 00 06 0a 04 00 06 02 02 ef
+        }
+
+        @SuppressLint("MissingPermission")
+        fun onCheckSurroundStatus() {
+            val result = btHeadset?.sendVendorSpecificResultCode(
+                btDevice,
+                "+XIAOMI",
+                "FF010201020101FF"
+            )
+        }
+
+        @SuppressLint("MissingPermission")
+        fun onActivateSurroundOn() {
+            val result = btHeadset?.sendVendorSpecificResultCode(
+                btDevice,
+                "+XIAOMI",
+                "FF01020103020501FF"
+            )
+        }
+
+        @SuppressLint("MissingPermission")
+        fun onActivateSurroundOff() {
+            val result = btHeadset?.sendVendorSpecificResultCode(
+                btDevice,
+                "+XIAOMI",
+                "FF01020103020500FF"
+            )
+        }
+
+
+        /// подключение
+
         fun getService(): BluetoothSDKService {
             return this@BluetoothSDKService
         }
@@ -554,7 +624,6 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
 
 
         fun send(command: List<Int>) {
-            Log.e("!@#", "TESTY")
             try {
                 IOBluetoothService(btSocket!!).sendData(byteArrayOfInts(command))
             } catch (e: NullPointerException) {
@@ -589,7 +658,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
             pushBroadcastMessage(BluetoothUtils.ACTION_DISCOVERY_STOPPED, null, null)
         }
 
-        fun onPermanentDenied(){
+        fun onPermanentDenied() {
             pushBroadcastMessage(BluetoothUtils.ACTION_REQUEST_PERMANENT_DENIED_PERMISSION, null, null)
         }
     }
@@ -626,7 +695,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                 pushBroadcastMessage(
                     BluetoothUtils.ACTION_DEVICE_INITIAL,
                     null,
-                    "a"
+                    "ACTION_DEVICE_INITIAL"
                 )
             }
         }
@@ -676,13 +745,21 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         return binder
     }
 
-    private fun pushBroadcastMessage(action: String, device: BluetoothDevice?, message: String?) {
+    private fun pushBroadcastMessage(
+        action: String,
+        device: BluetoothDevice?,
+        message: String?,
+        dataFromHeadset: ByteArray? = null,
+    ) {
         val intent = Intent(action)
         if (device != null) {
             intent.putExtra(BluetoothUtils.EXTRA_DEVICE, device)
         }
         if (message != null) {
             intent.putExtra(BluetoothUtils.EXTRA_MESSAGE, message)
+        }
+        if (dataFromHeadset != null) {
+            intent.putExtra(BluetoothUtils.EXTRA_DATA, dataFromHeadset)
         }
 
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
@@ -709,34 +786,13 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                         pushBroadcastMessage(
                             BluetoothUtils.ACTION_DEVICE_INITIAL,
                             null,
-                            "a"
+                            "ACTION_DEVICE_INITIAL"
                         )
                     } else {
                         connectDevice(btDevice)
-                        onCheckSurroundStatus()
+                        // onCheckSurroundStatus()
                     }
                 }
-
-//                if (btSocket?.isConnected == true) {
-//                  //  binder.send(BluetoothCommands.headsetInfo)
-////                    pushBroadcastMessage(
-////                        BluetoothUtils.ACTION_DEVICE_CONNECTED,
-////                        device,
-////                        device?.name
-////                    )
-//                } else {
-//                    if (device == null) {
-//                        pushBroadcastMessage(
-//                            BluetoothUtils.ACTION_DEVICE_INITIAL,
-//                            null,
-//                            "a"
-//                        )
-//                    } else {
-//                        connectDevice(btDevice)
-//                        onCheckSurroundStatus()
-//                    }
-//                }
-
             }
         }
 
@@ -752,19 +808,15 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
     }
 
 
-    @SuppressLint("MissingPermission")
-    private fun onCheckSurroundStatus() {
-        val result = btHeadset?.sendVendorSpecificResultCode(
-            btDevice,
-            "+XIAOMI",
-            "FF010201020101FF"
-        )
-//        if (result == true) {
-
-//        }
-//        Log.e(TAG, "Bluetooth Headset: CONNECTED RESULT CONNECT $result")
-
-    }
+//    @SuppressLint("MissingPermission")
+//    private fun onCheckSurroundStatus() {
+//        val result = btHeadset?.sendVendorSpecificResultCode(
+//            btDevice,
+//            "+XIAOMI",
+//            "FF010201020101FF"
+//        )
+//
+//    }
 
     private fun byteFirmwareVersionConverter(fw1: Byte, fw2: Byte): FirmwareInfo {
         val v = "%02x".format(fw1) + "%02x".format(fw2)
@@ -791,6 +843,11 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         return HeadsetBatteryStatus("$p%")
     }
 
+    private fun gyroConvertPosition(position: String?): Float {
+        if (position == null) return 0.0f
+        return java.lang.Float.intBitsToFloat(position.toLong(16).toInt())
+    }
+
     private fun gyroConvert(gyroData: MutableList<Byte>): String? {
         val yaw = gyroData.slice(12..15).map { "%02x".format(it) }.asReversed().joinToString(separator = "")
         val pitch = gyroData.slice(16..19).map { "%02x".format(it) }.asReversed().joinToString(separator = "")
@@ -808,55 +865,71 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         return null
     }
 
-    private fun gyroConvertPosition(position: String?): Float {
-        if (position == null) return 0.0f
-        return java.lang.Float.intBitsToFloat(position.toLong(16).toInt())
-    }
 
     ///
     ///
     ///   WEAR OS IMPLEMENT
     ///
     ///
+
+    private fun sendToWatch(data: ByteArray) {
+        scopeService.launch(Dispatchers.IO) {
+            try {
+                val nodes = nodeClient.connectedNodes.await()
+                // Send a message to all nodes in parallel
+                nodes.map { node ->
+                    async {
+                        messageClient.sendMessage(node.id, WATCH_UPDATE_INFO, data)
+                            .await()
+                    }
+                }.awaitAll()
+
+                Log.d("TAG", "Requests sent successfully")
+            } catch (cancellationException: CancellationException) {
+                throw cancellationException
+            } catch (exception: Exception) {
+                Log.d("TAG", "Send failed: $exception")
+            }
+        }
+    }
+
     override fun onDataChanged(dataEvents: DataEventBuffer) {
         Log.e("EVENTS PHONE", "${dataEvents.map { it.dataItem }}")
-//        _events.addAll(
-//            dataEvents.map { dataEvent ->
-//                val title = when (dataEvent.type) {
-//                    DataEvent.TYPE_CHANGED -> R.string.data_item_changed
-//                    DataEvent.TYPE_DELETED -> R.string.data_item_deleted
-//                    else -> R.string.data_item_unknown
-//                }
-//                Event(
-//                    title = title,
-//                    text = dataEvent.dataItem.toString()
-//                )
-//            }
-//        )
     }
 
     override fun onMessageReceived(messageEvent: MessageEvent) {
         Log.e("EVENTS", messageEvent.path)
         when (messageEvent.path) {
             START_ACTIVITY_PATH -> {
-                val notifyIntent = Intent(this, BluetoothSDKService::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    action = "START_ACTION"
+                val isRunningBluetoothService = isRunningService()
+                if (!isRunningBluetoothService) {
+                    val notifyIntent = Intent(this, BluetoothSDKService::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        action = "START_ACTION"
+                    }
+                    startService(notifyIntent)
                 }
-                startService(notifyIntent)
             }
-            QUERY_NOISE_MODE -> binder.send(BluetoothCommands.noise)
-            QUERY_TRANSPARENT_MODE -> binder.send(BluetoothCommands.transparency)
-            QUERY_OFF_MODE -> binder.send(BluetoothCommands.off)
+            QUERY_NOISE_MODE -> binder.activateNoiseMode()
+            QUERY_TRANSPARENT_MODE -> binder.activateTransparencyMode()
+            QUERY_OFF_MODE -> binder.activateOffMode()
         }
     }
 
+    private fun isRunningService(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            return false
+        }
+        val manager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
+        for (service in manager.getRunningServices(Int.MAX_VALUE)) {
+            if (BluetoothSDKService::class.java.name == service.service.className) {
+                return true
+            }
+        }
+        return false
+    }
+
     override fun onCapabilityChanged(capabilityInfo: CapabilityInfo) {
-//        _events.add(
-//            Event(
-//                title = R.string.capability_changed,
-//                text = capabilityInfo.toString()
-//            )
-//        )
+
     }
 }

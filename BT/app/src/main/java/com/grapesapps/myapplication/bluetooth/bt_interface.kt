@@ -3,14 +3,23 @@ package com.grapesapps.myapplication.bluetooth
 import android.bluetooth.BluetoothDevice
 
 interface IBluetoothSDKListener {
+
+    fun onDataFromHeadPhones(
+        device: BluetoothDevice?,
+        isSupportedSurround: Boolean?,
+        dataFromHeadset: ByteArray?
+    )
+
     /**
      * from action BluetoothUtils.ACTION_BT_ON
      */
     fun onBluetoothEnabled()
+
     /**
      * from action BluetoothUtils.ACTION_BT_OFF
      */
     fun onBluetoothDisabled()
+
 
     fun onBluetoothInitial()
 
@@ -33,7 +42,7 @@ interface IBluetoothSDKListener {
      * from action BluetoothUtils.ACTION_DEVICE_CONNECTED
      */
     fun onDeviceConnected(device: BluetoothDevice?, message: String)
-  //  fun onDeviceFoundConnected(device: BluetoothDevice?, message: String)
+    //  fun onDeviceFoundConnected(device: BluetoothDevice?, message: String)
 
     /**
      * from action BluetoothUtils.ACTION_MESSAGE_RECEIVED

@@ -142,30 +142,20 @@ class BluetoothService @Inject constructor() {
     suspend fun activateSearchAllHeadphoneOn() = sendData(byteArrayOfInts(searchAllHeadphoneOn))
     suspend fun activateSearchAllHeadphoneOff() = sendData(byteArrayOfInts(searchAllHeadphoneOff))
 
-
+    suspend fun getHeadsetInfo() = sendData(byteArrayOfInts(headsetInfo))
+    suspend fun checkHeadsetMode() = sendData(byteArrayOfInts(checkHeadsetMode))
     suspend fun activateHeadTest() {
         sendData(byteArrayOfInts(startHeadTest))
 
+        // проверка прилегания наушников
         //fe dc ba c7 f4 00 06 0a 04 00 06 01 01 ef
         //fe dc ba c7 f4 00 06 0a 04 00 06 02 02 ef
     }
 
-    suspend fun sendServiceMessage(data: ByteArray) {
-      //  val parsed = data.joinToString(" ") { "%02x".format(it) }
-      ///  Log.i("VM Bluetooth", parsed)
-        sendData(data)
-
-    }
-
-
-    suspend fun getHeadsetInfo() = sendData(byteArrayOfInts(headsetInfo))
-    suspend fun checkHeadsetMode() = sendData(byteArrayOfInts(checkHeadsetMode))
 
     private suspend fun reconnect(device: BluetoothDevice, uuid: UUID) = connectDevice(device, uuid)
 
     fun isConnected() = (this::btSocket.isInitialized && btSocket.isConnected)
-
-
 
 
     @SuppressLint("MissingPermission")

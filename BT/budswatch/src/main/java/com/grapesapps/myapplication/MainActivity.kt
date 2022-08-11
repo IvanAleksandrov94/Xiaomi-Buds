@@ -51,6 +51,14 @@ class MainActivity : ComponentActivity() {
                 // Send a message to all nodes in parallel
                 nodes.map { node ->
                     async {
+                        messageClient.sendMessage(node.id, START_ACTIVITY_PATH, byteArrayOf())
+                            .await()
+                        Log.d(TAG, "Starting activity requests sent successfully")
+
+                    }
+                }.awaitAll()
+                nodes.map { node ->
+                    async {
                         messageClient.sendMessage(node.id, QUERY_NOISE_MODE, byteArrayOf())
                             .await()
                         Log.d(TAG, "Starting activity requests sent successfully")
@@ -72,6 +80,14 @@ class MainActivity : ComponentActivity() {
                 val nodes = nodeClient.connectedNodes.await()
                 Log.d(TAG, "NODE SIZE ${nodes.size}")
                 // Send a message to all nodes in parallel
+                nodes.map { node ->
+                    async {
+                        messageClient.sendMessage(node.id, START_ACTIVITY_PATH, byteArrayOf())
+                            .await()
+                        Log.d(TAG, "Starting activity requests sent successfully")
+
+                    }
+                }.awaitAll()
                 nodes.map { node ->
                     async {
                         messageClient.sendMessage(node.id, QUERY_TRANSPARENT_MODE, byteArrayOf())
@@ -96,6 +112,14 @@ class MainActivity : ComponentActivity() {
                 val nodes = nodeClient.connectedNodes.await()
                 Log.d(TAG, "NODE SIZE ${nodes.size}")
                 // Send a message to all nodes in parallel
+                nodes.map { node ->
+                    async {
+                        messageClient.sendMessage(node.id, START_ACTIVITY_PATH, byteArrayOf())
+                            .await()
+                        Log.d(TAG, "Starting activity requests sent successfully")
+
+                    }
+                }.awaitAll()
                 nodes.map { node ->
                     async {
                         messageClient.sendMessage(node.id, QUERY_OFF_MODE, byteArrayOf())
