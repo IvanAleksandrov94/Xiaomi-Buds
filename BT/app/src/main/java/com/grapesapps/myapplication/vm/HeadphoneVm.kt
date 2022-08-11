@@ -129,18 +129,37 @@ class HeadphoneVm() : ViewModel() {
         }
     }
 
+    fun removeBond() = mBinder.value?.LocalBinder()?.removeBond()
+
     fun load() {
         mBinder.value?.LocalBinder()?.getHeadsetInfo()
-        viewState.postValue(
-            HeadphoneState.HeadphoneStateLoaded(
-                isConnected = false,
-                leftHeadsetStatus = LHeadsetBatteryStatus("-", false),
-                rightHeadsetStatus = RHeadsetBatteryStatus("-", false),
-                caseHeadsetStatus = CHeadsetBatteryStatus("-", false),
-                headsetStatus = HeadsetSettingStatus(setting = HeadsetMainSetting.Off, 0),
-                fwInfo = FirmwareInfo("")
+
+//        viewState.postValue(
+//            HeadphoneState.HeadphoneStateLoaded(
+//                isConnected = false,
+//                leftHeadsetStatus = LHeadsetBatteryStatus("-", false),
+//                rightHeadsetStatus = RHeadsetBatteryStatus("-", false),
+//                caseHeadsetStatus = CHeadsetBatteryStatus("-", false),
+//                headsetStatus = HeadsetSettingStatus(setting = HeadsetMainSetting.Off, 0),
+//                fwInfo = FirmwareInfo("-")
+//            )
+//        )
+    }
+
+    fun disconnect() {
+        if (state.value is HeadphoneState.HeadphoneStateLoaded) {
+            val currentState = state.value as HeadphoneState.HeadphoneStateLoaded
+            viewState.postValue(
+                HeadphoneState.HeadphoneStateLoaded(
+                    isConnected = false,
+                    leftHeadsetStatus = currentState.leftHeadsetStatus,
+                    rightHeadsetStatus = currentState.rightHeadsetStatus,
+                    caseHeadsetStatus = currentState.caseHeadsetStatus,
+                    headsetStatus = currentState.headsetStatus,
+                    fwInfo = currentState.fwInfo
+                )
             )
-        )
+        }
     }
 
 
@@ -312,7 +331,8 @@ class HeadphoneVm() : ViewModel() {
                                 RHeadsetBatteryStatus(bRInfoPercent.battery, bRInfoPercent.isCharging),
                                 CHeadsetBatteryStatus(bCInfoPercent.battery, bCInfoPercent.isCharging),
                                 (state.value as HeadphoneState.HeadphoneStateLoaded).headsetStatus,
-                                (state.value as HeadphoneState.HeadphoneStateLoaded).fwInfo,
+                                firmwareInfo
+                                // (state.value as HeadphoneState.HeadphoneStateLoaded).fwInfo,
                             )
                         )
                     } else {

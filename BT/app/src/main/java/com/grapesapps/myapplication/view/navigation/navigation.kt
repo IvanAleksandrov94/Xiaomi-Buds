@@ -2,6 +2,8 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import com.grapesapps.myapplication.view.navigation.Screen
+import com.grapesapps.myapplication.view.screens.CheckHeadPhoneScreen
+import com.grapesapps.myapplication.view.screens.SettingScreen
 import com.grapesapps.myapplication.view.screens.headphone.HeadphoneScreen
 import com.grapesapps.myapplication.view.screens.SplashScreen
 import com.grapesapps.myapplication.vm.HeadphoneVm
@@ -24,32 +26,52 @@ fun NavHostScreen(
         when (screen) {
             is Screen.SplashScreen -> SplashScreen(navController = navController, viewModel = splashVm)
             is Screen.HeadphoneScreen -> HeadphoneScreen(navController = navController, viewModel = headphoneVm)
+            is Screen.SettingScreen -> SettingScreen(navController = navController)
+            is Screen.CheckHeadphoneScreen -> CheckHeadPhoneScreen(navController = navController)
         }
     }
 }
 
 @OptIn(ExperimentalAnimationApi::class)
 private val MainNavHostTransitionSpec =
-    AnimatedNavHostTransitionSpec<Screen> { n, from, e ->
+    AnimatedNavHostTransitionSpec<Screen> { action, from, _ ->
 
-        if (from == Screen.SplashScreen) {
-            val outDuration = 100
-            fadeIn(
-                animationSpec = tween(durationMillis = 200, delayMillis = outDuration)
-            ) with fadeOut(
-                animationSpec = tween(durationMillis = outDuration)
-            ) + scaleOut(
-                targetScale = 2f,
-                animationSpec = tween(durationMillis = outDuration)
-            )
-        } else {
-            //  scaleIn() with scaleOut()
-            fadeIn(
-                animationSpec = tween(
-                    durationMillis = 500, delayMillis = 0
+        when (from) {
+            Screen.SplashScreen -> {
+                val outDuration = 100
+                fadeIn(
+                    animationSpec = tween(durationMillis = 200, delayMillis = outDuration)
+                ) with fadeOut(
+                    animationSpec = tween(durationMillis = outDuration)
+                ) + scaleOut(
+                    targetScale = 2f,
+                    animationSpec = tween(durationMillis = outDuration)
                 )
-            ) with fadeOut(
-                tween(0)
-            )
+            }
+            Screen.SettingScreen -> {
+                if (action == NavAction.Navigate) {
+                    slideIntoContainer(AnimatedContentScope.SlideDirection.Start) with fadeOut()
+                } else {
+                    fadeIn() with fadeOut()
+                }
+            }
+            Screen.CheckHeadphoneScreen -> {
+                if (action == NavAction.Navigate) {
+                    slideIntoContainer(AnimatedContentScope.SlideDirection.Start) with fadeOut()
+                } else {
+                    fadeIn() with fadeOut()
+                }
+            }
+            Screen.HeadphoneScreen -> {
+                if (action == NavAction.Navigate) {
+                    slideIntoContainer(AnimatedContentScope.SlideDirection.Start) with fadeOut()
+                } else {
+                    fadeIn(
+                        animationSpec = tween(
+                            durationMillis = 500, delayMillis = 0
+                        )
+                    ) with fadeOut()
+                }
+            }
         }
     }

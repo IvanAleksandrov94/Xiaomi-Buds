@@ -209,12 +209,12 @@ fun SplashScreen(
         }
     }
 
-    DisposableEffect(key1 = viewModel) {
-        onDispose {
-            val connection = viewModel.getServiceConnection()
-            context.unbindService(connection)
-        }
-    }
+//    DisposableEffect(key1 = viewModel) {
+//        onDispose {
+//            val connection = viewModel.getServiceConnection()
+//            context.unbindService(connection)
+//        }
+//    }
     Log.e("CURRENTSTATE", "${statePermission.value}")
 
     when (statePermission.value) {

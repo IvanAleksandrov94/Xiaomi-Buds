@@ -1,5 +1,6 @@
 package com.grapesapps.myapplication.view.screens.headphone
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -29,6 +30,7 @@ fun HeadSetInfo(
     r: RHeadsetBatteryStatus?,
     c: CHeadsetBatteryStatus?,
 ) {
+    Log.e("ISCONNECTEDDEVICE", "$isConnected")
     val connectMessage = if (isConnected) "connected" else "disconnected"
     var left: String = ""
     var right: String = ""

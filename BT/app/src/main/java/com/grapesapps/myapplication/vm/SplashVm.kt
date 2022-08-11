@@ -76,6 +76,7 @@ class Splash @Inject constructor() : ViewModel() {
 
     fun load() {
         viewState.postValue(SplashState.SplashStateIdle)
+        viewStateNavigate.postValue(false)
         //  viewStateNavigate.postValue(false)
     }
 

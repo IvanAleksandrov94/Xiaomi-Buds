@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
         override fun onDeviceConnected(device: BluetoothDevice?, message: String) {
             Log.e("IBluetoothSDKListener", "onDeviceConnected $message")
             splashVm.onDeviceConnected(deviceName = message)
+            headphoneVm.load()
         }
 
 
@@ -67,6 +68,7 @@ class MainActivity : ComponentActivity() {
         }
 
         override fun onDeviceDisconnected() {
+        //    headphoneVm.disconnect()
             Log.e("IBluetoothSDKListener", "onDeviceDisconnected")
 
         }
@@ -98,15 +100,18 @@ class MainActivity : ComponentActivity() {
 
         override fun onBluetoothDisabled() {
             splashVm.onBluetoothDisabled()
+         //   headphoneVm.disconnect()
             Log.e("IBluetoothSDKListener", "onBluetoothDisabled")
         }
 
         override fun onBluetoothInitial() {
             splashVm.load()
+           // headphoneVm.disconnect()
         }
 
         override fun onBluetoothEnabled() {
             splashVm.onBluetoothEnabled()
+            headphoneVm.load()
             Log.e("IBluetoothSDKListener", "onBluetoothEnabled")
         }
 

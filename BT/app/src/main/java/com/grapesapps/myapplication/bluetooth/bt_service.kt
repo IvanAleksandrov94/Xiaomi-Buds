@@ -92,6 +92,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         if (isDenied) {
             return
         }
+
         btManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         btAdapter = btManager.adapter
         btDevice = btAdapter.bondedDevices?.firstOrNull { it.name == "Xiaomi Buds 3T Pro" }
@@ -104,6 +105,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
             Uri.parse("wear://"),
             CapabilityClient.FILTER_REACHABLE
         )
+
         Log.e("BT_SERVICE", "IS CREATE")
     }
 
@@ -286,9 +288,9 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
 
         @SuppressLint("MissingPermission")
         fun connect() {
-
             socket.connect()
             btSocket = socket
+            sendData(byteArrayOfInts(BluetoothCommands.headsetInfo))
             listenData()
         }
 
@@ -554,7 +556,6 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
 
         /// команды
 
-
         fun activateOffMode() = send(BluetoothCommands.off)
         fun activateNoiseMode() = send(BluetoothCommands.noise)
         fun activateTransparencyMode() = send(BluetoothCommands.transparency)
@@ -606,7 +607,24 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
             )
         }
 
+        //Разорвать пару
+        fun removeBond() {
+            try {
+                scopeService.launch {
+                    pushBroadcastMessage(
+                        BluetoothUtils.ACTION_DEVICE_INITIAL,
+                        null,
+                        "ACTION_DEVICE_INITIAL"
+                    )
+                    delay(500L)
+                    btDevice!!::class.java.getMethod("removeBond").invoke(btDevice)
+                }
 
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Removing bond has been failed. ${e.message}")
+            }
+        }
         /// подключение
 
         fun getService(): BluetoothSDKService {
@@ -620,10 +638,10 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
 
         fun startSearchReceiver() = binder.startDiscovery()
 
-        private fun connectDevice() = connectDevice(btDevice)
+        fun connectDevice() = connectDevice(btDevice)
 
 
-        fun send(command: List<Int>) {
+        private fun send(command: List<Int>) {
             try {
                 IOBluetoothService(btSocket!!).sendData(byteArrayOfInts(command))
             } catch (e: NullPointerException) {

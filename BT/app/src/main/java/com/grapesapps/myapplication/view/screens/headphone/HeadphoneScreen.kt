@@ -1,7 +1,10 @@
 package com.grapesapps.myapplication.view.screens.headphone
 
+import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.util.Log
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -30,10 +33,15 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import com.grapesapps.myapplication.bluetooth.BluetoothSDKService
 import com.grapesapps.myapplication.entity.HeadsetMainSetting
 import com.grapesapps.myapplication.ui.theme.BudsApplicationTheme
 import com.grapesapps.myapplication.view.observeAsState
+import com.grapesapps.myapplication.vm.SplashStatePermission
+import dev.olshevski.navigation.reimagined.navigate
+import dev.olshevski.navigation.reimagined.replaceAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -78,6 +86,23 @@ fun HeadphoneScreen(
             }
         }
     )
+
+    LaunchedEffect(key1 = lifecycleState) {
+        when (lifecycleState) {
+            Lifecycle.Event.ON_RESUME -> {
+                viewModel.load()
+            }
+            else -> Unit
+        }
+    }
+
+    when (val state = state.value) {
+        is HeadphoneState.HeadphoneStateLoaded -> {
+
+        }
+
+        else -> {}
+    }
 
     BudsApplicationTheme {
         Scaffold(
@@ -202,14 +227,55 @@ fun HeadphoneScreen(
                                     )
                                     Row(
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 15.dp),
+                                            .padding(start = 15.dp, bottom = 10.dp, end = 10.dp)
+                                            .fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        Text("Объемный звук", fontSize = 14.sp)
+                                        Column() {
+                                            Text("Объемный звук", fontSize = 14.sp)
+                                            Text(
+                                                "Статичное объемное звучание.Статичное объемное звучание.Статичное объемное звучание.",
+                                                fontSize = 10.sp,
+                                                lineHeight = 15.sp
+                                            )
+                                        }
+                                        Column() {
+                                            Switch(
+                                                modifier = Modifier
+                                                    .scale(0.8f)
+                                                    .padding(end = 15.dp),
+                                                checked = switchChecked,
+                                                colors = SwitchDefaults.colors(
+
+                                                ),
+                                                onCheckedChange = {
+                                                    viewModel.onSelectSurroundAudio(isEnabled = it)
+                                                }
+
+                                            )
+                                            Text("1")
+                                            Spacer(modifier = Modifier.width(15.dp))
+                                        }
+
+                                    }
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(start = 15.dp, bottom = 10.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Column(
+                                        ) {
+                                            Text("Отслеживание движения головы", fontSize = 14.sp)
+                                            Text("Включение отслеживания движения головы.", fontSize = 10.sp)
+
+                                        }
                                         Switch(
-                                            modifier = Modifier.scale(0.8f),
+                                            modifier = Modifier
+                                                .scale(0.8f)
+                                                .padding(end = 15.dp),
                                             checked = switchChecked,
                                             colors = SwitchDefaults.colors(
 
@@ -223,27 +289,7 @@ fun HeadphoneScreen(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(horizontal = 15.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Text("Отслеживание движения головы", fontSize = 14.sp)
-                                        Switch(
-                                            modifier = Modifier.scale(0.8f),
-                                            checked = switchChecked,
-                                            colors = SwitchDefaults.colors(
-
-                                            ),
-                                            onCheckedChange = {
-                                                viewModel.onSelectSurroundAudio(isEnabled = it)
-                                            }
-
-                                        )
-                                    }
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(start = 15.dp),
+                                            .padding(start = 15.dp, bottom = 5.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
@@ -251,7 +297,7 @@ fun HeadphoneScreen(
                                         ) {
                                             Text("Улучшить объемный звук [BETA]", fontSize = 14.sp)
                                             Text("Может работать нестабильно и не со всеми плеерами", fontSize = 10.sp)
-                                            Text("Необходимо будет перезапустить текущий плеер", fontSize = 10.sp)
+                                            Text("Необходимо перезапустить текущий плеер.", fontSize = 10.sp)
                                         }
                                         Switch(
                                             modifier = Modifier
@@ -326,10 +372,12 @@ fun HeadphoneScreen(
                                     )
                                     Row(
                                         modifier = Modifier
-                                            .clickable { }
+                                            .clickable {
+                                                navController.navigate(Screen.SettingScreen)
+                                            }
                                             .height(60.dp)
                                             .fillMaxWidth()
-                                            .padding(horizontal = 15.dp, vertical = 0.dp),
+                                            .padding(horizontal = 15.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
@@ -340,10 +388,12 @@ fun HeadphoneScreen(
 
                                     Row(
                                         modifier = Modifier
-                                            .clickable { }
+                                            .clickable {
+                                                navController.navigate(Screen.CheckHeadphoneScreen)
+                                            }
                                             .height(60.dp)
                                             .fillMaxWidth()
-                                            .padding(horizontal = 15.dp, vertical = 0.dp),
+                                            .padding(horizontal = 15.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
@@ -359,24 +409,15 @@ fun HeadphoneScreen(
                             Text(
                                 "Отменить сопряжение",
                                 fontSize = 16.sp,
-                                color = Color.White,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(start = 5.dp, end = 15.dp, top = 70.dp, bottom = 15.dp),
-                            )
-
-                        }
-                        item {
-
-                            Text(
-                                "Удалить устройство",
-                                fontSize = 16.sp,
                                 color = Color.Red,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(start = 5.dp, end = 15.dp),
+                                    .padding(start = 5.dp, top = 70.dp)
+                                    .clickable {
+                                        viewModel.removeBond()
+                                        navController.replaceAll(Screen.SplashScreen)
+                                    },
                             )
 
                         }
