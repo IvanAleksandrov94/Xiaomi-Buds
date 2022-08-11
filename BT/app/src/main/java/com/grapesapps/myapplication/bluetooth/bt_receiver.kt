@@ -76,6 +76,9 @@ class BluetoothSDKListenerHelper {
                     BluetoothUtils.ACTION_REQUEST_PERMISSION -> {
                         mGlobalListener?.onRequestPermission()
                     }
+                    BluetoothUtils.ACTION_REQUEST_PERMANENT_DENIED_PERMISSION -> {
+                        mGlobalListener?.onRequestPermanentDeniedPermission()
+                    }
                 }
             }
         }
@@ -102,6 +105,7 @@ class BluetoothSDKListenerHelper {
                     it.addAction(BluetoothUtils.ACTION_DEVICE_NOT_FOUND)
                     it.addAction(BluetoothUtils.ACTION_DEVICE_INITIAL)
                     it.addAction(BluetoothUtils.ACTION_REQUEST_PERMISSION)
+                    it.addAction(BluetoothUtils.ACTION_REQUEST_PERMANENT_DENIED_PERMISSION)
 
                 }
 

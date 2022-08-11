@@ -62,4 +62,6 @@ interface IBluetoothSDKListener {
 
     fun onRequestPermission()
 
+    fun onRequestPermanentDeniedPermission()
+
 }

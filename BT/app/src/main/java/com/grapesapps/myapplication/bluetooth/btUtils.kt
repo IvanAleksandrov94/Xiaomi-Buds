@@ -3,6 +3,7 @@ package com.grapesapps.myapplication.bluetooth
 class BluetoothUtils {
     companion object {
         const val ACTION_REQUEST_PERMISSION = "ACTION_REQUEST_PERMISSION"
+        const val ACTION_REQUEST_PERMANENT_DENIED_PERMISSION = "ACTION_REQUEST_PERMANENT_DENIED_PERMISSION"
         const val ACTION_BT_ON = "ACTION_BT_ON"
         const val ACTION_BT_OFF = "ACTION_BT_OFF"
         const val ACTION_DEVICE_INITIAL = "ACTION_DEVICE_INITIAL"

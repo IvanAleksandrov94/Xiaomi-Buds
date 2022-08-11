@@ -27,6 +27,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.State
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -45,29 +47,6 @@ class MainActivity : ComponentActivity() {
     private val splashVm by viewModels<Splash>()
     private val headphoneVm by viewModels<HeadphoneVm>()
 
-
-
-    val launcherPermissions = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        if (permissions.isNotEmpty()) {
-            val p = permissions
-                .filterKeys { it != "android.permission.SYSTEM_ALERT_WINDOW" }
-                .filterValues { !it }
-            if (p.isEmpty()) {
-                splashVm.load()
-            } else {
-                splashVm.onChangePermission(SplashStatePermission.SplashStatePermissionDenied)
-                Toast.makeText(this, "Предоставьте доступ к устройствам поблизости", Toast.LENGTH_LONG).show()
-                val intent = Intent(
-                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.fromParts("package", this.packageName, null)
-                )
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                ContextCompat.startActivity(this, intent, Bundle())
-            }
-        }
-    }
 
     private val mBluetoothListener: IBluetoothSDKListener = object : IBluetoothSDKListener {
 
@@ -118,30 +97,29 @@ class MainActivity : ComponentActivity() {
             splashVm.onRequestPermission()
         }
 
+        override fun onRequestPermanentDeniedPermission() {
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+//                requestPermissionLauncher.launch(
+//                    arrayOf(
+//                        Manifest.permission.BLUETOOTH_CONNECT,
+//                        Manifest.permission.BLUETOOTH_ADMIN,
+//                        Manifest.permission.BLUETOOTH,
+//                        Manifest.permission.BLUETOOTH_SCAN,
+//                        Manifest.permission.FOREGROUND_SERVICE,
+//                        Manifest.permission.RECEIVE_BOOT_COMPLETED,
+//                        Manifest.permission.WAKE_LOCK,
+//                    )
+//                )
+//            }
+        }
+
         override fun onBluetoothDisabled() {
             splashVm.onBluetoothDisabled()
             Log.e("IBluetoothSDKListener", "onBluetoothDisabled")
         }
 
         override fun onBluetoothInitial() {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-             //   if (splashVm.viewStateSplashPermission.value is SplashStatePermission.SplashStatePermissionInitial) {
-//                ContextCompat.checkSelfPermission(this , Manifest.permission.BLUETOOTH_CONNECT)
-                   // splashVm.onChangePermission(SplashStatePermission.SplashStatePermissionRequested)
-//                    launcherPermissions.launch(
-//                        arrayOf(
-//                            Manifest.permission.BLUETOOTH_CONNECT,
-//                            Manifest.permission.BLUETOOTH_ADMIN,
-//                            Manifest.permission.BLUETOOTH,
-//                            Manifest.permission.BLUETOOTH_SCAN,
-//                            Manifest.permission.FOREGROUND_SERVICE,
-//                            Manifest.permission.RECEIVE_BOOT_COMPLETED,
-//                            Manifest.permission.WAKE_LOCK,
-//                        )
-//                    )
-                }
-          //  }
-              splashVm.load()
+            splashVm.load()
         }
 
         override fun onBluetoothEnabled() {
@@ -149,36 +127,109 @@ class MainActivity : ComponentActivity() {
             Log.e("IBluetoothSDKListener", "onBluetoothEnabled")
         }
     }
+//    private val requestPermissionLauncher =
+//        registerForActivityResult(
+//            ActivityResultContracts.RequestMultiplePermissions()
+//        ) { permissions ->
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+//
+//                val result = permissions
+//                    .filterKeys {
+//                        it == Manifest.permission.BLUETOOTH_CONNECT
+//                    }
+//
+//                val deniedList: List<String> = result.filter {
+//                    !it.value
+//                }.map {
+//                    it.key
+//                }
+//                when {
+//                    deniedList.isNotEmpty() -> {
+//                        val map = deniedList.groupBy { permission ->
+//                            if (ActivityCompat.shouldShowRequestPermissionRationale(
+//                                    this,
+//                                    permission
+//                                )
+//                            ) "DENIED" else "EXPLAINED"
+//                        }
+//                        map["DENIED"]?.let {
+//                            splashVm.onRequestPermission()
+//                            print(it)
+//                        }
+//                        map["EXPLAINED"]?.let {
+//                            splashVm.onRequestPermission()
+//                            if (splashVm.viewStateSplashPermission.value is SplashStatePermission.SplashStatePermissionRequested) {
+//                                Toast.makeText(
+//                                    this,
+//                                    "Предоставьте разрешение к обнаружению устройств поблизости",
+//                                    Toast.LENGTH_LONG
+//                                ).show()
+//                                val intent = Intent(
+//                                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+//                                    Uri.fromParts("package", packageName, null)
+//                                )
+//                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+//                                ActivityCompat.startActivityForResult(this, intent, 1, Bundle())
+//                            }
+//                        }
+//                    }
+//                    else -> {
+//                        splashVm.onChangePermission(SplashStatePermission.SplashStatePermissionGranted)
+//                        //splashVm.load()
+//
+//                    }
+//                }
+//            } else {
+//                Toast.makeText(this, "Предоставьте разрешение к обнаружению устройств поблизости", Toast.LENGTH_LONG)
+//                    .show()
+//            }
+//        }
+
+    override fun onResume() {
+        super.onResume()
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+//            if (splashVm.viewStateSplashPermission.value is SplashStatePermission.SplashStatePermissionRequested) {
+//                val isGranted = ContextCompat.checkSelfPermission(
+//                    this,
+//                    Manifest.permission.BLUETOOTH_CONNECT
+//                )
+//                if (isGranted == 0) {
+//                    splashVm.onChangePermission(SplashStatePermission.SplashStatePermissionGranted)
+//                    //splashVm.load()
+//                } else {
+//                    splashVm.onChangePermission(SplashStatePermission.SplashStatePermissionRequested)
+//                }
+//            }
+//            if (splashVm.viewStateSplashPermission.value is SplashStatePermission.SplashStatePermissionInitial) {
+//                splashVm.onChangePermission(SplashStatePermission.SplashStatePermissionRequested)
+//                requestPermissionLauncher.launch(
+//                    arrayOf(
+//                        Manifest.permission.BLUETOOTH_CONNECT,
+//                        Manifest.permission.BLUETOOTH_ADMIN,
+//                        Manifest.permission.BLUETOOTH,
+//                        Manifest.permission.BLUETOOTH_SCAN,
+//                        Manifest.permission.FOREGROUND_SERVICE,
+//                        Manifest.permission.RECEIVE_BOOT_COMPLETED,
+//                        Manifest.permission.WAKE_LOCK,
+//                    )
+//                )
+//            }
+//        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         BluetoothSDKListenerHelper.registerBluetoothSDKListener(this, mBluetoothListener)
+
         //pref = SharedPrefManager(this)
 
 
-        val notifyIntent = Intent(this, BluetoothSDKService::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            action = "START_ACTION"
-        }
-        startService(notifyIntent)
-//
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-//            ActivityCompat.requestPermissions(
-//                this,
-//                arrayOf(
-//                    Manifest.permission.BLUETOOTH_CONNECT,
-//                    Manifest.permission.BLUETOOTH_ADMIN,
-//                    Manifest.permission.BLUETOOTH,
-//                    Manifest.permission.BLUETOOTH_SCAN,
-//                    Manifest.permission.FOREGROUND_SERVICE,
-//                    Manifest.permission.RECEIVE_BOOT_COMPLETED,
-//                    Manifest.permission.WAKE_LOCK,
-//                    Manifest.permission.SYSTEM_ALERT_WINDOW,
-//
-//                    ),
-//                1
-//            )
+//        val notifyIntent = Intent(this, BluetoothSDKService::class.java).apply {
+//            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+//            action = "START_ACTION"
 //        }
+//        startService(notifyIntent)
+
         val intentFilter = IntentFilter().apply {
             addAction(AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION)
             addAction(AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION)

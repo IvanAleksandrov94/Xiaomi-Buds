@@ -588,6 +588,10 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
             btAdapter.cancelDiscovery()
             pushBroadcastMessage(BluetoothUtils.ACTION_DISCOVERY_STOPPED, null, null)
         }
+
+        fun onPermanentDenied(){
+            pushBroadcastMessage(BluetoothUtils.ACTION_REQUEST_PERMANENT_DENIED_PERMISSION, null, null)
+        }
     }
 
 

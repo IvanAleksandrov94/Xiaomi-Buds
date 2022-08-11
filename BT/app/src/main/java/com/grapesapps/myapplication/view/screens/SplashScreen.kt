@@ -52,6 +52,7 @@ import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.Lifecycle
 import com.google.common.reflect.Reflection.getPackageName
 import com.grapesapps.myapplication.bluetooth.BluetoothSDKService
+import com.grapesapps.myapplication.bluetooth.BluetoothUtils
 import com.grapesapps.myapplication.ui.theme.BudsApplicationTheme
 import com.grapesapps.myapplication.view.navigation.Screen
 import com.grapesapps.myapplication.view.observeAsState
@@ -75,6 +76,7 @@ fun SplashScreen(
     val context = LocalContext.current
     val lifecycleStateObserver = LocalLifecycleOwner.current.lifecycle.observeAsState()
     val lifecycleState = lifecycleStateObserver.value
+    var isRequestedPermission by remember { mutableStateOf(false) }
 
     fun bindBluetoothService() {
         val connection = viewModel.getServiceConnection()
@@ -89,7 +91,6 @@ fun SplashScreen(
             )
         }
     }
-
 
     val requestPermissionLauncher =
         rememberLauncherForActivityResult(
@@ -117,12 +118,16 @@ fun SplashScreen(
                             ) "DENIED" else "EXPLAINED"
                         }
                         map["DENIED"]?.let {
+                            isRequestedPermission = true
+                            viewModel.onRequestPermission()
                             print(it)
                         }
                         map["EXPLAINED"]?.let {
-                            if (statePermission.value is SplashStatePermission.SplashStatePermissionRequested) {
+                            isRequestedPermission = true
+                            viewModel.onRequestPermission()
+                            if (viewModel.viewStateSplashPermission.value is SplashStatePermission.SplashStatePermissionRequested) {
                                 Toast.makeText(
-                                    context,
+                                    context as Activity,
                                     "Предоставьте разрешение к обнаружению устройств поблизости",
                                     Toast.LENGTH_LONG
                                 ).show()
@@ -137,11 +142,17 @@ fun SplashScreen(
                     }
                     else -> {
                         viewModel.onChangePermission(SplashStatePermission.SplashStatePermissionGranted)
-                        viewModel.loadBeforeRequestPermission()
+                        if (isRequestedPermission) {
+                            viewModel.loadBeforeRequestPermission()
+                        }
                     }
                 }
             } else {
-                Toast.makeText(context, "Предоставьте разрешение к обнаружению устройств поблизости", Toast.LENGTH_LONG)
+                Toast.makeText(
+                    context as Activity,
+                    "Предоставьте разрешение к обнаружению устройств поблизости",
+                    Toast.LENGTH_LONG
+                )
                     .show()
             }
         }
@@ -150,8 +161,16 @@ fun SplashScreen(
         key1 = viewModel,
         block = {
             launch {
+                if (ActivityCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.BLUETOOTH_CONNECT
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    isRequestedPermission = true
+                    viewModel.onRequestPermission()
+                }
                 // requestPermissions()
-                bindBluetoothService()
+                //   bindBluetoothService()
             }
         }
     )
@@ -160,7 +179,7 @@ fun SplashScreen(
         when (lifecycleState) {
             Lifecycle.Event.ON_RESUME -> {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    if (statePermission.value is SplashStatePermission.SplashStatePermissionRequested) {
+                    if (viewModel.viewStateSplashPermission.value is SplashStatePermission.SplashStatePermissionRequested) {
                         val isGranted = checkSelfPermission(
                             context as Activity,
                             Manifest.permission.BLUETOOTH_CONNECT
@@ -172,7 +191,7 @@ fun SplashScreen(
                             viewModel.onChangePermission(SplashStatePermission.SplashStatePermissionRequested)
                         }
                     }
-                    if (statePermission.value is SplashStatePermission.SplashStatePermissionInitial) {
+                    if (viewModel.viewStateSplashPermission.value is SplashStatePermission.SplashStatePermissionInitial) {
                         viewModel.onChangePermission(SplashStatePermission.SplashStatePermissionRequested)
                         requestPermissionLauncher.launch(
                             arrayOf(
@@ -195,9 +214,35 @@ fun SplashScreen(
     DisposableEffect(key1 = viewModel) {
         onDispose {
             val connection = viewModel.getServiceConnection()
-            context.unbindService(connection);
+            context.unbindService(connection)
         }
     }
+    Log.e("CURRENTSTATE", "${statePermission.value}")
+
+    when (statePermission.value) {
+        is SplashStatePermission.SplashStatePermissionGranted -> {
+            val notifyIntent = Intent(context, BluetoothSDKService::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                action = "START_ACTION"
+            }
+//            context.stopService(notifyIntent)
+//            val connection = viewModel.getServiceConnection()
+//            context.unbindService(connection)
+            context.startService(notifyIntent)
+            bindBluetoothService()
+            viewModel.onChangePermission(SplashStatePermission.SplashStateSuccessLoaded)
+            //   viewModel.load()
+        }
+
+        else -> {}
+
+    }
+
+//            val notifyIntent = Intent(this, BluetoothSDKService::class.java).apply {
+//            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+//            action = "START_ACTION"
+//        }
+//        startService(notifyIntent)
 
 
     val stateMainText = remember {
@@ -457,7 +502,6 @@ fun SplashScreen(
                                                     interactionSource = MutableInteractionSource(),
                                                     indication = null,
                                                     onClick = {
-                                                        //  requestPermissions()
                                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                                                             requestPermissionLauncher.launch(
                                                                 arrayOf(
@@ -471,6 +515,7 @@ fun SplashScreen(
                                                                 )
                                                             )
                                                         }
+                                                        // viewModel.onRequestPermanentDeniedPermission()
                                                     }
                                                 )
                                         )

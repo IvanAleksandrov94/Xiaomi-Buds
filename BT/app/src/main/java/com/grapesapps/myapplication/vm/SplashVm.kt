@@ -36,6 +36,7 @@ sealed class SplashStatePermission {
     object SplashStatePermissionRequested : SplashStatePermission()
     object SplashStatePermissionDenied : SplashStatePermission()
     object SplashStatePermissionGranted : SplashStatePermission()
+    object SplashStateSuccessLoaded : SplashStatePermission()
 }
 
 @HiltViewModel
@@ -82,6 +83,10 @@ class Splash @Inject constructor() : ViewModel() {
 
 
     fun onRequestPermission() = viewState.postValue(SplashState.SplashRequestPermission)
+
+    fun onRequestPermanentDeniedPermission (){
+        mBinder.value?.LocalBinder()?.onPermanentDenied()
+    }
 
     fun onDeviceNotFound() = viewState.postValue(SplashState.SplashDeviceNotFound)
 
