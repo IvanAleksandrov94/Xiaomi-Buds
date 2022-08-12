@@ -181,7 +181,6 @@ class HeadphoneVm() : ViewModel() {
         if (dataFromHeadset == null) {
             return
         }
-
         Log.e(TAG, "DATA FROM ${device?.name}: ${dataFromHeadset.map { it }}")
         try {
             // Status Headset

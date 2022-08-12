@@ -21,10 +21,6 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.wearable.*
 import com.grapesapps.myapplication.MainActivity
 import com.grapesapps.myapplication.R
-import com.grapesapps.myapplication.bluetooth.BluetoothBatteryCommands.percentList
-import com.grapesapps.myapplication.bluetooth.BluetoothBatteryCommands.percentListBattery
-import com.grapesapps.myapplication.entity.FirmwareInfo
-import com.grapesapps.myapplication.entity.HeadsetBatteryStatus
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
@@ -268,8 +264,8 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
             return
         }
         scopeService.launch(Dispatchers.IO) {
-            btAdapter.getProfileProxy(context, mProfileListener, BluetoothProfile.HEADSET)
             binder.startDiscovery()
+            btAdapter.getProfileProxy(context, mProfileListener, BluetoothProfile.HEADSET)
 
             if (!btAdapter.isEnabled) {
                 pushBroadcastMessage(
@@ -310,6 +306,8 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                             Log.e(TAG, "${e.message}")
                         }
                     } else {
+                        connectDevice(btDevice)
+                        mmOutStream.write(data)
                         Log.e(TAG, "${e.message}")
                     }
                 }
@@ -325,12 +323,6 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                     if (bytes != 0) {
                         val tempBuffer = ByteArray(bytes)
                         mmInStream.read(tempBuffer, 0, bytes)
-//fe dc ba c7 0e 00 04 08 02 04 00 ef fe dc ba c7 f4 00 06 09 04 00 0b 00 00 ef fe dc ba 01 08 00 02 01 07 ef
-//fe dc ba c7 0e 00 04 08 02 04 00 ef fe dc ba c7 f4 00 06 09 04 00 0b 00 00 ef fe dc ba 01 08 00 02 01 07 ef
-
-//fe dc ba 01 02 00 3b 00 02 13 00 58 69 61 6f 6d 69 20 42 75 64 73 20 33 54 20 50 72 6f 03 01 52 40 02 02 64 05 03 27 17 50 2d 02 04 01 02 05 00 03 06 12 34 04 07 64 5f ff 02 0a 01 02 0b 00 02 0d 02 ef
-//fe dc ba 01 02 00 3b 00 02 13 00 58 69 61 6f 6d 69 20 42 75 64 73 20 33 54 20 50 72 6f 03 01 52 40 02 02 64 05 03 27 17 50 2d 02 04 01 02 05 00 03 06 12 34 04 07 64 5f ff 02 0a 01 02 0b 00 02 0d 02 ef
-//fe dc ba 01 02 00 3b 00 02 13 00 58 69 61 6f 6d 69 20 42 75 64 73 20 33 54 20 50 72 6f 03 01 52 40 02 02 64 05 03 27 17 50 2d 02 04 01 02 05 00 03 06 12 34 04 07 64 5f ff 02 0a 01 02 0b 00 02 0d 02 ef
                         if (tempBuffer.size == 25 && tempBuffer[6] == 0x11.toByte()) {
                             val mutableTempBuffer: MutableList<Byte> = tempBuffer.toMutableList()
                             val parameters = gyroConvert(mutableTempBuffer)
@@ -356,186 +348,6 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                             val parsed = tempBuffer.joinToString(" ") { "%02x".format(it) }
                             //  Log.i(TAG, "${tempBuffer.map { it.toByte() }}")
                             Log.i(TAG, parsed)
-                        }
-
-                        // Status Headset
-                        // byteArr[6] is 0x04 --> headset mode
-                        // byteArr[6] is 0x0f --> battery percent
-                        // byteArr[6] is 0x3b --> battery charging status
-                        when (tempBuffer[6]) {
-                            0x04.toByte() -> {
-                                // Headset Mode
-                                // byteArr[10] is 0x01 --> headset mode
-                                // byteArr[10] is 0x02 --> battery percent
-                                // byteArr[10] is 0x03 --> battery charging status
-                                when (val headsetMode = tempBuffer[10]) {
-                                    0x00.toByte() -> {
-                                        if (tempBuffer.size < 24) {
-                                            ///   btService.checkHeadsetMode()
-                                            break
-                                        }
-                                        Log.i(
-                                            "VM Bluetooth",
-                                            "${headsetMode.toInt()} ОТКЛЮЧЕНО SIZE:${tempBuffer.size}"
-                                        )
-
-//                                        if (state.value is HomeState.HomeStateLoaded) {
-//                                            val headsetStatus =
-//                                                HeadsetSettingStatus(HeadsetMainSetting.Off, tempBuffer[24].toInt())
-//                                            viewState.postValue(
-//                                                HomeState.HomeStateLoaded(
-//                                                    true,
-//                                                    1,
-//                                                    (state.value as HomeState.HomeStateLoaded).leftHeadsetStatus,
-//                                                    (state.value as HomeState.HomeStateLoaded).rightHeadsetStatus,
-//                                                    (state.value as HomeState.HomeStateLoaded).caseHeadsetStatus,
-//                                                    headsetStatus,
-//                                                    (state.value as HomeState.HomeStateLoaded).fwInfo,
-//                                                )
-//                                            )
-//                                        }
-                                    }
-                                    0x01.toByte() -> {
-                                        if (tempBuffer.size < 24) {
-                                            ///    btService.checkHeadsetMode()
-                                            break
-                                        }
-                                        Log.i(
-                                            "VM Bluetooth",
-                                            "${headsetMode.toInt()} Включен режим: ШУМОДАВ SIZE:${tempBuffer.size}"
-                                        )
-//                                        if (state.value is HomeState.HomeStateLoaded) {
-//                                            val noiseValue = when (tempBuffer[24]) {
-//                                                0x03.toByte() -> 0
-//                                                0x01.toByte() -> 1
-//                                                0x00.toByte() -> 2
-//                                                0x02.toByte() -> 3
-//                                                else -> 0
-//                                            }
-//                                            val headsetStatus =
-//                                                HeadsetSettingStatus(HeadsetMainSetting.Noise, noiseValue)
-//                                            viewState.postValue(
-//                                                HomeState.HomeStateLoaded(
-//                                                    true,
-//                                                    0,
-//                                                    (state.value as HomeState.HomeStateLoaded).leftHeadsetStatus,
-//                                                    (state.value as HomeState.HomeStateLoaded).rightHeadsetStatus,
-//                                                    (state.value as HomeState.HomeStateLoaded).caseHeadsetStatus,
-//                                                    headsetStatus,
-//                                                    (state.value as HomeState.HomeStateLoaded).fwInfo,
-//                                                )
-//                                            )
-//                                        }
-                                    }
-                                    0x02.toByte() -> {
-                                        if (tempBuffer.size < 24) {
-                                            ///  btService.checkHeadsetMode()
-                                            break
-                                        }
-                                        Log.i(
-                                            "VM Bluetooth",
-                                            "${headsetMode.toInt()} Включен режим: ПРОЗРАЧНОСТЬ SIZE:${tempBuffer.size}"
-                                        )
-//                                        if (state.value is HomeState.HomeStateLoaded) {
-//                                            val headsetStatus =
-//                                                HeadsetSettingStatus(
-//                                                    HeadsetMainSetting.Transparency,
-//                                                    tempBuffer[24].toInt()
-//                                                )
-//                                            viewState.postValue(
-//                                                HomeState.HomeStateLoaded(
-//                                                    true,
-//                                                    2,
-//                                                    (state.value as HomeState.HomeStateLoaded).leftHeadsetStatus,
-//                                                    (state.value as HomeState.HomeStateLoaded).rightHeadsetStatus,
-//                                                    (state.value as HomeState.HomeStateLoaded).caseHeadsetStatus,
-//                                                    headsetStatus,
-//                                                    (state.value as HomeState.HomeStateLoaded).fwInfo,
-//                                                )
-//                                            )
-//                                        }
-                                    }
-                                }
-                            }
-                            0x0f.toByte() -> {
-                                Log.i("VM Bluetooth", "Size: ${tempBuffer.size}")
-                                // Left earphone battery percent
-                                val bLPercent: HeadsetBatteryStatus =
-                                    bytePercentConverter(tempBuffer[10])
-                                // Right earphone battery percent
-                                val bRPercent: HeadsetBatteryStatus =
-                                    bytePercentConverter(tempBuffer[11])
-                                // Case battery percent
-                                val bCPercent: HeadsetBatteryStatus =
-                                    bytePercentConverter(tempBuffer[12])
-//                                if (state.value is HomeState.HomeStateLoaded) {
-//                                    viewState.postValue(
-//                                        HomeState.HomeStateLoaded(
-//                                            true,
-//                                            (state.value as HomeState.HomeStateLoaded).mainHeadsetValue,
-//                                            LHeadsetBatteryStatus(bLPercent.battery, bLPercent.isCharging),
-//                                            RHeadsetBatteryStatus(bRPercent.battery, bRPercent.isCharging),
-//                                            CHeadsetBatteryStatus(bCPercent.battery, bCPercent.isCharging),
-//                                            (state.value as HomeState.HomeStateLoaded).headsetStatus,
-//                                            (state.value as HomeState.HomeStateLoaded).fwInfo,
-//                                        )
-//                                    )
-//                                }
-                                Log.i(
-                                    "VM Bluetooth", "Заряд INFO: " +
-                                            "L: ${if (bLPercent.isCharging) "🔋" else ""}${bLPercent.battery} " +
-                                            "R: ${if (bRPercent.isCharging) "🔋" else ""}${bRPercent.battery} " +
-                                            "C: ${if (bCPercent.isCharging) "🔋" else ""}${bCPercent.battery}"
-                                )
-                            }
-                            0x3b.toByte() -> {
-                                // Left earphone battery charging status
-                                val bLInfoPercent: HeadsetBatteryStatus =
-                                    bytePercentConverter(tempBuffer[54])
-                                // Right earphone battery charging status
-                                val bRInfoPercent: HeadsetBatteryStatus =
-                                    bytePercentConverter(tempBuffer[55])
-                                // Case battery charging status
-                                val bCInfoPercent: HeadsetBatteryStatus =
-                                    bytePercentConverter(tempBuffer[56])
-                                // Headset Firmware Version
-                                val firmwareInfo = byteFirmwareVersionConverter(tempBuffer[31], tempBuffer[32])
-
-
-//                                if (state.value is HomeState.HomeStateLoaded) {
-//                                    viewState.postValue(
-//                                        HomeState.HomeStateLoaded(
-//                                            true,
-//                                            (state.value as HomeState.HomeStateLoaded).mainHeadsetValue,
-//                                            LHeadsetBatteryStatus(bLInfoPercent.battery, bLInfoPercent.isCharging),
-//                                            RHeadsetBatteryStatus(bRInfoPercent.battery, bRInfoPercent.isCharging),
-//                                            CHeadsetBatteryStatus(bCInfoPercent.battery, bCInfoPercent.isCharging),
-//                                            (state.value as HomeState.HomeStateLoaded).headsetStatus,
-//                                            (state.value as HomeState.HomeStateLoaded).fwInfo,
-//                                        )
-//                                    )
-//                                } else {
-//                                    viewState.postValue(
-//                                        HomeState.HomeStateLoaded(
-//                                            true,
-//                                            -1,
-//                                            LHeadsetBatteryStatus(bLInfoPercent.battery, bLInfoPercent.isCharging),
-//                                            RHeadsetBatteryStatus(bRInfoPercent.battery, bRInfoPercent.isCharging),
-//                                            CHeadsetBatteryStatus(bCInfoPercent.battery, bCInfoPercent.isCharging),
-//                                            null,
-//                                            firmwareInfo,
-//                                        )
-//                                    )
-//                                }
-//                                btService.checkHeadsetMode()
-                                Log.i(
-                                    "VM Bluetooth", "Заряд INFO: " +
-                                            "L: ${if (bLInfoPercent.isCharging) "🔋" else ""}${bLInfoPercent.battery} " +
-                                            "R: ${if (bRInfoPercent.isCharging) "🔋" else ""}${bRInfoPercent.battery} " +
-                                            "C: ${if (bCInfoPercent.isCharging) "🔋" else ""}${bCInfoPercent.battery} " +
-                                            "Firmware version : ${firmwareInfo.version}"
-                                )
-                            }
                         }
                     }
                 }
@@ -577,7 +389,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         fun activateSearchAllHeadphoneOff() = send(BluetoothCommands.searchAllHeadphoneOff)
 
         fun getHeadsetInfo() = send(BluetoothCommands.headsetInfo)
-        fun getSurroundAudioInfo() = send(BluetoothCommands.surroundAudioInfo)
+        fun getSurroundAudioInfo() = send(BluetoothCommands.surroundAudioInfo.map { it.toInt() })
         fun checkHeadsetMode() = send(BluetoothCommands.checkHeadsetMode)
         fun activateHeadTest() {
             send(BluetoothCommands.startHeadTest)
@@ -595,7 +407,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
             )
         }
 
-      //  +XIAOMI: FF010201020102FF
+        //  +XIAOMI: FF010201020102FF
 
         @SuppressLint("MissingPermission")
         fun onActivateSurroundOn() {
@@ -604,7 +416,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                 "+XIAOMI",
                 "FF01020103020501FF"
             )
-
+            print(result)
         }
 
 
@@ -615,6 +427,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                 "+XIAOMI",
                 "FF01020103020500FF"
             )
+            print(result)
 
         }
 
@@ -672,6 +485,11 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
             val filter = IntentFilter(BluetoothDevice.ACTION_FOUND)
             filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
             filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
+            filter.addCategory(
+                BluetoothHeadset.VENDOR_SPECIFIC_HEADSET_EVENT_COMPANY_ID_CATEGORY +
+                        '.' + 911
+            )
+            filter.addAction(BluetoothHeadset.ACTION_VENDOR_SPECIFIC_HEADSET_EVENT)
             registerReceiver(discoveryBroadcastReceiver, filter)
             btAdapter.startDiscovery()
             pushBroadcastMessage(BluetoothUtils.ACTION_DISCOVERY_STARTED, null, null)
@@ -704,7 +522,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
             if (isDenied) {
                 return
             }
-            Log.e("discoveryBroadcastReceiver", "${intent.action}")
+
             if (intent.action == "android.bluetooth.device.action.ACL_CONNECTED") {
                 Log.e("discoveryBroadcastReceiver", "${intent.action}")
                 val device: BluetoothDevice? =
@@ -728,8 +546,18 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                 )
             }
 
-            if(intent.action == "android.bluetooth.headset.action.VENDOR_SPECIFIC_HEADSET_EVENT"){
-                Log.e("VENDOR_SPECIFIC_HEADSET_EVENT", "${intent.action}")
+            if (intent.action == "android.bluetooth.headset.action.VENDOR_SPECIFIC_HEADSET_EVENT") {
+                val objArr =
+                    intent.extras?.get("android.bluetooth.headset.extra.VENDOR_SPECIFIC_HEADSET_EVENT_ARGS") as Array<*>?
+                if (objArr != null) {
+                    val strArr = arrayOfNulls<String>(objArr.size)
+                    var str = ""
+                    for (i2 in objArr.indices) {
+                        strArr[i2] = objArr[i2] as String
+                        str = StringBuilder(java.lang.String.valueOf(str)).append(strArr[i2]).append(" ").toString()
+                    }
+                    Log.e("VENDOR_SPECIFIC_HEADSET_EVENT", str)
+                }
             }
         }
     }
@@ -814,6 +642,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
 
                 val isConnected = btSocket?.isConnected ?: false
 
+
                 if (!isConnected) {
                     if (device == null) {
                         pushBroadcastMessage(
@@ -823,7 +652,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                         )
                     } else {
                         connectDevice(btDevice)
-                        // onCheckSurroundStatus()
+                        onCheckSurroundStatus()
                     }
                 }
             }
@@ -841,39 +670,16 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
     }
 
 
-//    @SuppressLint("MissingPermission")
-//    private fun onCheckSurroundStatus() {
-//        val result = btHeadset?.sendVendorSpecificResultCode(
-//            btDevice,
-//            "+XIAOMI",
-//            "FF010201020101FF"
-//        )
-//
-//    }
+    @SuppressLint("MissingPermission")
+    fun onCheckSurroundStatus() {
+        val result = btHeadset?.sendVendorSpecificResultCode(
+            btDevice,
+            "+XIAOMI",
+            "FF010201020101FF"
+        )
 
-    private fun byteFirmwareVersionConverter(fw1: Byte, fw2: Byte): FirmwareInfo {
-        val v = "%02x".format(fw1) + "%02x".format(fw2)
-        val b = StringBuilder()
-        for (i in v.toList()) {
-            if (i == v.last()) {
-                b.append("$i")
-                break
-            }
-            b.append("$i.")
-        }
-        return FirmwareInfo(version = b.toString())
-    }
+        Log.e("onCheckSurroundStatus", "$result")
 
-    private fun bytePercentConverter(p: Byte): HeadsetBatteryStatus {
-        if (p.toInt() == -1) {
-            return HeadsetBatteryStatus("-")
-        }
-        for (i in percentListBattery.indices) {
-            if (percentListBattery[i] == p) {
-                return HeadsetBatteryStatus("${percentList[i]}%", true)
-            }
-        }
-        return HeadsetBatteryStatus("$p%")
     }
 
     private fun gyroConvertPosition(position: String?): Float {
