@@ -325,7 +325,12 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                     if (bytes != 0) {
                         val tempBuffer = ByteArray(bytes)
                         mmInStream.read(tempBuffer, 0, bytes)
+//fe dc ba c7 0e 00 04 08 02 04 00 ef fe dc ba c7 f4 00 06 09 04 00 0b 00 00 ef fe dc ba 01 08 00 02 01 07 ef
+//fe dc ba c7 0e 00 04 08 02 04 00 ef fe dc ba c7 f4 00 06 09 04 00 0b 00 00 ef fe dc ba 01 08 00 02 01 07 ef
 
+//fe dc ba 01 02 00 3b 00 02 13 00 58 69 61 6f 6d 69 20 42 75 64 73 20 33 54 20 50 72 6f 03 01 52 40 02 02 64 05 03 27 17 50 2d 02 04 01 02 05 00 03 06 12 34 04 07 64 5f ff 02 0a 01 02 0b 00 02 0d 02 ef
+//fe dc ba 01 02 00 3b 00 02 13 00 58 69 61 6f 6d 69 20 42 75 64 73 20 33 54 20 50 72 6f 03 01 52 40 02 02 64 05 03 27 17 50 2d 02 04 01 02 05 00 03 06 12 34 04 07 64 5f ff 02 0a 01 02 0b 00 02 0d 02 ef
+//fe dc ba 01 02 00 3b 00 02 13 00 58 69 61 6f 6d 69 20 42 75 64 73 20 33 54 20 50 72 6f 03 01 52 40 02 02 64 05 03 27 17 50 2d 02 04 01 02 05 00 03 06 12 34 04 07 64 5f ff 02 0a 01 02 0b 00 02 0d 02 ef
                         if (tempBuffer.size == 25 && tempBuffer[6] == 0x11.toByte()) {
                             val mutableTempBuffer: MutableList<Byte> = tempBuffer.toMutableList()
                             val parameters = gyroConvert(mutableTempBuffer)
@@ -572,6 +577,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         fun activateSearchAllHeadphoneOff() = send(BluetoothCommands.searchAllHeadphoneOff)
 
         fun getHeadsetInfo() = send(BluetoothCommands.headsetInfo)
+        fun getSurroundAudioInfo() = send(BluetoothCommands.surroundAudioInfo)
         fun checkHeadsetMode() = send(BluetoothCommands.checkHeadsetMode)
         fun activateHeadTest() {
             send(BluetoothCommands.startHeadTest)
@@ -589,6 +595,8 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
             )
         }
 
+      //  +XIAOMI: FF010201020102FF
+
         @SuppressLint("MissingPermission")
         fun onActivateSurroundOn() {
             val result = btHeadset?.sendVendorSpecificResultCode(
@@ -596,7 +604,9 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                 "+XIAOMI",
                 "FF01020103020501FF"
             )
+
         }
+
 
         @SuppressLint("MissingPermission")
         fun onActivateSurroundOff() {
@@ -605,6 +615,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                 "+XIAOMI",
                 "FF01020103020500FF"
             )
+
         }
 
         //Разорвать пару
@@ -715,6 +726,10 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                     null,
                     "ACTION_DEVICE_INITIAL"
                 )
+            }
+
+            if(intent.action == "android.bluetooth.headset.action.VENDOR_SPECIFIC_HEADSET_EVENT"){
+                Log.e("VENDOR_SPECIFIC_HEADSET_EVENT", "${intent.action}")
             }
         }
     }

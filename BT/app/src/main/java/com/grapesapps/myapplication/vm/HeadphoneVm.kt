@@ -13,6 +13,7 @@ import com.grapesapps.myapplication.bluetooth.BluetoothBatteryCommands
 import com.grapesapps.myapplication.bluetooth.BluetoothSDKService
 import com.grapesapps.myapplication.entity.*
 import java.io.IOException
+import java.util.*
 
 
 sealed class HeadphoneState {
@@ -93,6 +94,8 @@ class HeadphoneVm() : ViewModel() {
     }
 
     fun onSelectAutoSearchEar(isEnabled: Boolean) {
+
+
         try {
             if (isEnabled) {
                 mBinder.value?.LocalBinder()?.activateAutoSearchEarOff()
@@ -109,21 +112,27 @@ class HeadphoneVm() : ViewModel() {
         try {
             if (isEnabled) {
                 mBinder.value?.LocalBinder()?.activateAutoPhoneAnswerOff()
+
                 return
             }
             mBinder.value?.LocalBinder()?.activateAutoPhoneAnswerOn()
+
         } catch (e: Exception) {
             Log.e(TAG, "onSelectAutoPhoneAnswer Error: $e")
         }
     }
 
     fun onSelectSurroundAudio(isEnabled: Boolean) {
+        val random = Random()
+       val b =  random.nextBoolean()
         try {
-            if (isEnabled) {
+            if (b) {
                 mBinder.value?.LocalBinder()?.onActivateSurroundOff()
+                mBinder.value?.LocalBinder()?.getSurroundAudioInfo()
                 return
             }
             mBinder.value?.LocalBinder()?.onActivateSurroundOn()
+            mBinder.value?.LocalBinder()?.getSurroundAudioInfo()
         } catch (e: Exception) {
             Log.e(TAG, "onSelectSpectralAudio Error: $e")
         }

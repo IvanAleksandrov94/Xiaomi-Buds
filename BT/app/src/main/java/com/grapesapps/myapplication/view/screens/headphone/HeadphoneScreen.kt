@@ -61,6 +61,8 @@ fun HeadphoneScreen(
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberSplineBasedDecay(), rememberTopAppBarState())
     var switchChecked by remember { mutableStateOf(false) }
+    var searchHear by remember { mutableStateOf(false) }
+    var autoAnswer by remember { mutableStateOf(false) }
 
     fun bindBluetoothService() {
         val connection = viewModel.getServiceConnection()
@@ -333,13 +335,13 @@ fun HeadphoneScreen(
                                         Text("Обнаружение уха", fontSize = 14.sp)
                                         Switch(
                                             modifier = Modifier.scale(0.8f),
-                                            checked = false,
+                                            checked = searchHear,
                                             colors = SwitchDefaults.colors(
 
                                             ),
                                             onCheckedChange = {
                                                 viewModel.onSelectAutoSearchEar(isEnabled = it)
-                                                //  switchChecked = it
+                                                searchHear = it
                                             }
 
                                         )
@@ -354,13 +356,13 @@ fun HeadphoneScreen(
                                         Text("Автоматический ответ", fontSize = 14.sp)
                                         Switch(
                                             modifier = Modifier.scale(0.8f),
-                                            checked = false,
+                                            checked = autoAnswer,
                                             colors = SwitchDefaults.colors(
 
                                             ),
                                             onCheckedChange = {
                                                 viewModel.onSelectAutoPhoneAnswer(isEnabled = it)
-                                                //   switchChecked = it
+                                                autoAnswer = it
                                             }
 
                                         )
