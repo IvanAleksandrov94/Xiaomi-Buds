@@ -1,10 +1,7 @@
 package com.grapesapps.myapplication.view.screens.headphone
 
-import android.Manifest
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.util.Log
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -33,17 +30,12 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.Lifecycle
 import com.grapesapps.myapplication.bluetooth.BluetoothSDKService
 import com.grapesapps.myapplication.entity.HeadsetMainSetting
 import com.grapesapps.myapplication.ui.theme.BudsApplicationTheme
 import com.grapesapps.myapplication.view.observeAsState
-import com.grapesapps.myapplication.vm.SplashStatePermission
 import dev.olshevski.navigation.reimagined.navigate
 import dev.olshevski.navigation.reimagined.replaceAll
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -60,6 +52,7 @@ fun HeadphoneScreen(
     val scrollState = rememberLazyListState()
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberSplineBasedDecay(), rememberTopAppBarState())
+    var switchHeadTracker by remember { mutableStateOf(false) }
     var switchChecked by remember { mutableStateOf(false) }
     var searchHear by remember { mutableStateOf(false) }
     var autoAnswer by remember { mutableStateOf(false) }
@@ -115,6 +108,7 @@ fun HeadphoneScreen(
 
     when (val state = state.value) {
         is HeadphoneState.HeadphoneStateLoaded -> {
+            switchHeadTracker = state.isEnableHeadTracking
 
         }
 
@@ -124,9 +118,7 @@ fun HeadphoneScreen(
     BudsApplicationTheme {
         Scaffold(
             content = { contentPadding ->
-                Box(
-                    //  modifier = Modifier.padding(contentPadding)
-                ) {
+                Box() {
                     LazyColumn(
                         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                         contentPadding = contentPadding,
@@ -180,7 +172,7 @@ fun HeadphoneScreen(
                                                 isConnected = state.isConnected,
                                                 mainHeadsetValue = state.mainHeadsetValue,
                                                 onCheckedChange = {
-                                                    viewModel.changeMainSetting(it, state)
+                                                    viewModel.changeMainSetting(it)
                                                 }
                                             )
                                             when (state.headsetStatus?.setting) {
@@ -243,37 +235,30 @@ fun HeadphoneScreen(
                                     )
                                     Row(
                                         modifier = Modifier
-                                            .padding(start = 15.dp, bottom = 10.dp, end = 10.dp)
-                                            .fillMaxWidth(),
+                                            .fillMaxWidth()
+                                            .padding(start = 15.dp, bottom = 10.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        Column() {
+                                        Column(
+                                        ) {
                                             Text("Объемный звук", fontSize = 14.sp)
-                                            Text(
-                                                "Статичное объемное звучание.Статичное объемное звучание.Статичное объемное звучание.",
-                                                fontSize = 10.sp,
-                                                lineHeight = 15.sp
-                                            )
+                                            Text("Статичное объемное звучание.", fontSize = 10.sp)
+
                                         }
-                                        Column() {
-                                            Switch(
-                                                modifier = Modifier
-                                                    .scale(0.8f)
-                                                    .padding(end = 15.dp),
-                                                checked = switchChecked,
-                                                colors = SwitchDefaults.colors(
+                                        Switch(
+                                            modifier = Modifier
+                                                .scale(0.8f)
+                                                .padding(end = 15.dp),
+                                            checked = switchChecked,
+                                            colors = SwitchDefaults.colors(
 
-                                                ),
-                                                onCheckedChange = {
-                                                    viewModel.onSelectSurroundAudio(isEnabled = it)
-                                                }
+                                            ),
+                                            onCheckedChange = {
+                                                viewModel.onChangeSurroundAudio(isEnabled = it)
+                                            }
 
-                                            )
-                                            Text("1")
-                                            Spacer(modifier = Modifier.width(15.dp))
-                                        }
-
+                                        )
                                     }
                                     Row(
                                         modifier = Modifier
@@ -292,14 +277,14 @@ fun HeadphoneScreen(
                                             modifier = Modifier
                                                 .scale(0.8f)
                                                 .padding(end = 15.dp),
-                                            checked = switchChecked,
+                                            checked = switchHeadTracker,
                                             colors = SwitchDefaults.colors(
 
                                             ),
                                             onCheckedChange = {
-                                                viewModel.onSelectSurroundAudio(isEnabled = it)
+                                                viewModel.onChangeHeadTracker()
+//                                                viewModel.onSelectSurroundAudio(isEnabled = it)
                                             }
-
                                         )
                                     }
                                     Row(
@@ -324,7 +309,7 @@ fun HeadphoneScreen(
 
                                             ),
                                             onCheckedChange = {
-                                                viewModel.onSelectSurroundAudio(isEnabled = it)
+                                                viewModel.onChangeSurroundAudio(isEnabled = it)
                                             }
                                         )
                                     }

@@ -19,8 +19,11 @@ import java.util.*
 sealed class HeadphoneState {
     object HeadphoneStateInitial : HeadphoneState()
     object HeadphoneStateNeedConnect : HeadphoneState()
-    class HeadphoneStateLoaded(
+    data class HeadphoneStateLoaded(
         val isConnected: Boolean,
+        val isAvailableSurround: Boolean,
+        val isEnableSurround: Boolean,
+        val isEnableHeadTracking: Boolean,
         val mainHeadsetValue: Int = -1,
         val leftHeadsetStatus: LHeadsetBatteryStatus?,
         val rightHeadsetStatus: RHeadsetBatteryStatus?,
@@ -56,41 +59,27 @@ class HeadphoneVm() : ViewModel() {
             mBinder.value = binder.getService()
         }
 
-        override fun onServiceDisconnected(arg0: ComponentName) {
-
-        }
-
+        override fun onServiceDisconnected(arg0: ComponentName) {}
     }
+
 
     fun getServiceConnection(): ServiceConnection = serviceConnection
 
 
-    fun changeMainSetting(mainHeadsetValue: Int, state: HeadphoneState.HeadphoneStateLoaded) {
-        //  val isConnected = btService.isConnected()
-
-        try {
-            when (mainHeadsetValue) {
-                0 -> mBinder.value?.LocalBinder()?.activateNoiseMode()
-                1 -> mBinder.value?.LocalBinder()?.activateOffMode()
-                2 -> mBinder.value?.LocalBinder()?.activateTransparencyMode()
+    fun changeMainSetting(mainHeadsetValue: Int) {
+        if (state.value is HeadphoneState.HeadphoneStateLoaded) {
+            val currentState = state.value as HeadphoneState.HeadphoneStateLoaded
+            try {
+                when (mainHeadsetValue) {
+                    0 -> mBinder.value?.LocalBinder()?.activateNoiseMode()
+                    1 -> mBinder.value?.LocalBinder()?.activateOffMode()
+                    2 -> mBinder.value?.LocalBinder()?.activateTransparencyMode()
+                }
+            } catch (e: Exception) {
+                viewState.postValue(currentState)
             }
-        } catch (e: Exception) {
-            // delay(150L)
-            // errorViewState.postValue("Проверьте прилегание наушников")
-            viewState.postValue(state)
+            viewState.postValue(currentState.copy(mainHeadsetValue = mainHeadsetValue))
         }
-
-        viewState.postValue(
-            HeadphoneState.HeadphoneStateLoaded(
-                true,
-                mainHeadsetValue,
-                state.leftHeadsetStatus,
-                state.rightHeadsetStatus,
-                state.caseHeadsetStatus,
-                state.headsetStatus,
-                state.fwInfo,
-            )
-        )
     }
 
     fun onSelectAutoSearchEar(isEnabled: Boolean) {
@@ -120,7 +109,7 @@ class HeadphoneVm() : ViewModel() {
         }
     }
 
-    fun onSelectSurroundAudio(isEnabled: Boolean) {
+    fun onChangeSurroundAudio(isEnabled: Boolean) {
         try {
             if (isEnabled) {
                 mBinder.value?.LocalBinder()?.onActivateSurroundOff()
@@ -133,6 +122,14 @@ class HeadphoneVm() : ViewModel() {
         }
     }
 
+    fun onChangeHeadTracker() {
+        if (state.value is HeadphoneState.HeadphoneStateLoaded) {
+            val currentState = state.value as HeadphoneState.HeadphoneStateLoaded
+            mBinder.value?.LocalBinder()?.onChangeHeadTrack(!currentState.isEnableHeadTracking)
+            viewState.postValue(currentState.copy(isEnableHeadTracking = !currentState.isEnableHeadTracking))
+        }
+    }
+
     fun removeBond() = mBinder.value?.LocalBinder()?.removeBond()
 
     fun load() {
@@ -140,7 +137,10 @@ class HeadphoneVm() : ViewModel() {
         if (state.value is HeadphoneState.HeadphoneStateInitial) {
             viewState.postValue(
                 HeadphoneState.HeadphoneStateLoaded(
-                    isConnected = false,
+                    isConnected = true,
+                    isAvailableSurround = true,
+                    isEnableSurround = true,
+                    isEnableHeadTracking = false,
                     leftHeadsetStatus = LHeadsetBatteryStatus("-", false),
                     rightHeadsetStatus = RHeadsetBatteryStatus("-", false),
                     caseHeadsetStatus = CHeadsetBatteryStatus("-", false),
@@ -150,19 +150,12 @@ class HeadphoneVm() : ViewModel() {
             )
         }
     }
+
+
     fun disconnect() {
         if (state.value is HeadphoneState.HeadphoneStateLoaded) {
             val currentState = state.value as HeadphoneState.HeadphoneStateLoaded
-            viewState.postValue(
-                HeadphoneState.HeadphoneStateLoaded(
-                    isConnected = false,
-                    leftHeadsetStatus = currentState.leftHeadsetStatus,
-                    rightHeadsetStatus = currentState.rightHeadsetStatus,
-                    caseHeadsetStatus = currentState.caseHeadsetStatus,
-                    headsetStatus = currentState.headsetStatus,
-                    fwInfo = currentState.fwInfo
-                )
-            )
+            viewState.postValue(currentState.copy(isConnected = false))
         }
     }
 
@@ -176,7 +169,7 @@ class HeadphoneVm() : ViewModel() {
         if (dataFromHeadset == null) {
             return
         }
-      //  Log.e(TAG, "DATA FROM ${device?.name}: ${dataFromHeadset.map { it }}")
+        //  Log.e(TAG, "DATA FROM ${device?.name}: ${dataFromHeadset.map { it }}")
         try {
             // Status Headset
             // byteArr[6] is 0x04 --> headset mode
@@ -203,15 +196,11 @@ class HeadphoneVm() : ViewModel() {
                             if (state.value is HeadphoneState.HeadphoneStateLoaded) {
                                 val headsetStatus =
                                     HeadsetSettingStatus(HeadsetMainSetting.Off, dataFromHeadset[24].toInt())
+                                val currentState = state.value as HeadphoneState.HeadphoneStateLoaded
                                 viewState.postValue(
-                                    HeadphoneState.HeadphoneStateLoaded(
-                                        true,
-                                        1,
-                                        (state.value as HeadphoneState.HeadphoneStateLoaded).leftHeadsetStatus,
-                                        (state.value as HeadphoneState.HeadphoneStateLoaded).rightHeadsetStatus,
-                                        (state.value as HeadphoneState.HeadphoneStateLoaded).caseHeadsetStatus,
-                                        headsetStatus,
-                                        (state.value as HeadphoneState.HeadphoneStateLoaded).fwInfo,
+                                    currentState.copy(
+                                        mainHeadsetValue = 1,
+                                        headsetStatus = headsetStatus,
                                     )
                                 )
                             }
@@ -236,15 +225,11 @@ class HeadphoneVm() : ViewModel() {
                                 }
                                 val headsetStatus =
                                     HeadsetSettingStatus(HeadsetMainSetting.Noise, noiseValue)
+                                val currentState = state.value as HeadphoneState.HeadphoneStateLoaded
                                 viewState.postValue(
-                                    HeadphoneState.HeadphoneStateLoaded(
-                                        true,
-                                        0,
-                                        (state.value as HeadphoneState.HeadphoneStateLoaded).leftHeadsetStatus,
-                                        (state.value as HeadphoneState.HeadphoneStateLoaded).rightHeadsetStatus,
-                                        (state.value as HeadphoneState.HeadphoneStateLoaded).caseHeadsetStatus,
-                                        headsetStatus,
-                                        (state.value as HeadphoneState.HeadphoneStateLoaded).fwInfo,
+                                    currentState.copy(
+                                        mainHeadsetValue = 0,
+                                        headsetStatus = headsetStatus,
                                     )
                                 )
                             }
@@ -252,7 +237,6 @@ class HeadphoneVm() : ViewModel() {
                         0x02.toByte() -> {
                             if (dataFromHeadset.size < 24) {
                                 mBinder.value?.LocalBinder()?.checkHeadsetMode()
-                                ///  btService.checkHeadsetMode()
                                 return
                             }
                             Log.i(
@@ -265,15 +249,11 @@ class HeadphoneVm() : ViewModel() {
                                         HeadsetMainSetting.Transparency,
                                         dataFromHeadset[24].toInt()
                                     )
+                                val currentState = state.value as HeadphoneState.HeadphoneStateLoaded
                                 viewState.postValue(
-                                    HeadphoneState.HeadphoneStateLoaded(
-                                        true,
-                                        2,
-                                        (state.value as HeadphoneState.HeadphoneStateLoaded).leftHeadsetStatus,
-                                        (state.value as HeadphoneState.HeadphoneStateLoaded).rightHeadsetStatus,
-                                        (state.value as HeadphoneState.HeadphoneStateLoaded).caseHeadsetStatus,
-                                        headsetStatus,
-                                        (state.value as HeadphoneState.HeadphoneStateLoaded).fwInfo,
+                                    currentState.copy(
+                                        mainHeadsetValue = 2,
+                                        headsetStatus = headsetStatus,
                                     )
                                 )
                             }
@@ -292,15 +272,12 @@ class HeadphoneVm() : ViewModel() {
                     val bCPercent: HeadsetBatteryStatus =
                         bytePercentConverter(dataFromHeadset[12])
                     if (state.value is HeadphoneState.HeadphoneStateLoaded) {
+                        val currentState = state.value as HeadphoneState.HeadphoneStateLoaded
                         viewState.postValue(
-                            HeadphoneState.HeadphoneStateLoaded(
-                                true,
-                                (state.value as HeadphoneState.HeadphoneStateLoaded).mainHeadsetValue,
-                                LHeadsetBatteryStatus(bLPercent.battery, bLPercent.isCharging),
-                                RHeadsetBatteryStatus(bRPercent.battery, bRPercent.isCharging),
-                                CHeadsetBatteryStatus(bCPercent.battery, bCPercent.isCharging),
-                                (state.value as HeadphoneState.HeadphoneStateLoaded).headsetStatus,
-                                (state.value as HeadphoneState.HeadphoneStateLoaded).fwInfo,
+                            currentState.copy(
+                                leftHeadsetStatus = LHeadsetBatteryStatus(bLPercent.battery, bLPercent.isCharging),
+                                rightHeadsetStatus = RHeadsetBatteryStatus(bRPercent.battery, bRPercent.isCharging),
+                                caseHeadsetStatus = CHeadsetBatteryStatus(bCPercent.battery, bCPercent.isCharging),
                             )
                         )
                     }
@@ -326,33 +303,50 @@ class HeadphoneVm() : ViewModel() {
 
 
                     if (state.value is HeadphoneState.HeadphoneStateLoaded) {
+                        val currentState = state.value as HeadphoneState.HeadphoneStateLoaded
                         viewState.postValue(
-                            HeadphoneState.HeadphoneStateLoaded(
-                                true,
-                                (state.value as HeadphoneState.HeadphoneStateLoaded).mainHeadsetValue,
-                                LHeadsetBatteryStatus(bLInfoPercent.battery, bLInfoPercent.isCharging),
-                                RHeadsetBatteryStatus(bRInfoPercent.battery, bRInfoPercent.isCharging),
-                                CHeadsetBatteryStatus(bCInfoPercent.battery, bCInfoPercent.isCharging),
-                                (state.value as HeadphoneState.HeadphoneStateLoaded).headsetStatus,
-                                firmwareInfo
-                                // (state.value as HeadphoneState.HeadphoneStateLoaded).fwInfo,
+                            currentState.copy(
+                                leftHeadsetStatus = LHeadsetBatteryStatus(
+                                    bLInfoPercent.battery,
+                                    bLInfoPercent.isCharging
+                                ),
+                                rightHeadsetStatus = RHeadsetBatteryStatus(
+                                    bRInfoPercent.battery,
+                                    bRInfoPercent.isCharging
+                                ),
+                                caseHeadsetStatus = CHeadsetBatteryStatus(
+                                    bCInfoPercent.battery,
+                                    bCInfoPercent.isCharging
+                                ),
+                                fwInfo = firmwareInfo
                             )
                         )
                     } else {
                         viewState.postValue(
                             HeadphoneState.HeadphoneStateLoaded(
                                 true,
-                                -1,
-                                LHeadsetBatteryStatus(bLInfoPercent.battery, bLInfoPercent.isCharging),
-                                RHeadsetBatteryStatus(bRInfoPercent.battery, bRInfoPercent.isCharging),
-                                CHeadsetBatteryStatus(bCInfoPercent.battery, bCInfoPercent.isCharging),
-                                null,
-                                firmwareInfo,
+                                isAvailableSurround = true,
+                                isEnableSurround = true,
+                                isEnableHeadTracking = false,
+                                mainHeadsetValue = -1,
+                                leftHeadsetStatus = LHeadsetBatteryStatus(
+                                    bLInfoPercent.battery,
+                                    bLInfoPercent.isCharging
+                                ),
+                                rightHeadsetStatus = RHeadsetBatteryStatus(
+                                    bRInfoPercent.battery,
+                                    bRInfoPercent.isCharging
+                                ),
+                                caseHeadsetStatus = CHeadsetBatteryStatus(
+                                    bCInfoPercent.battery,
+                                    bCInfoPercent.isCharging
+                                ),
+                                headsetStatus = null,
+                                fwInfo = firmwareInfo,
                             )
                         )
                     }
                     mBinder.value?.LocalBinder()?.checkHeadsetMode()
-//                                btService.checkHeadsetMode()
                     Log.i(
                         "VM Bluetooth", "Заряд INFO: " +
                                 "L: ${if (bLInfoPercent.isCharging) "🔋" else ""}${bLInfoPercent.battery} " +
