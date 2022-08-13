@@ -119,12 +119,12 @@ fun SplashScreen(
                         }
                         map["DENIED"]?.let {
                             isRequestedPermission = true
-                           // viewModel.onRequestPermission()
+                            // viewModel.onRequestPermission()
                             print(it)
                         }
                         map["EXPLAINED"]?.let {
                             isRequestedPermission = true
-                           // viewModel.onRequestPermission()
+                            // viewModel.onRequestPermission()
                             if (viewModel.viewStateSplashPermission.value is SplashStatePermission.SplashStatePermissionRequested) {
                                 Toast.makeText(
                                     context as Activity,
@@ -209,13 +209,17 @@ fun SplashScreen(
         }
     }
 
-//    DisposableEffect(key1 = viewModel) {
-//        onDispose {
-//            val connection = viewModel.getServiceConnection()
-//            context.unbindService(connection)
-//        }
-//    }
-    Log.e("CURRENTSTATE", "${statePermission.value}")
+    DisposableEffect(key1 = viewModel) {
+        onDispose {
+            try {
+                val connection = viewModel.getServiceConnection()
+                context.unbindService(connection)
+            } catch (e:Exception){
+                Log.e("SplashScreen", "$e")
+            }
+        }
+    }
+    // Log.e("CURRENTSTATE", "${statePermission.value}")
 
     when (statePermission.value) {
         is SplashStatePermission.SplashStatePermissionGranted -> {
@@ -223,25 +227,14 @@ fun SplashScreen(
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 action = "START_ACTION"
             }
-//            context.stopService(notifyIntent)
-//            val connection = viewModel.getServiceConnection()
-//            context.unbindService(connection)
             context.startService(notifyIntent)
             bindBluetoothService()
             viewModel.onChangePermission(SplashStatePermission.SplashStateSuccessLoaded)
-            //   viewModel.load()
         }
 
         else -> {}
 
     }
-
-//            val notifyIntent = Intent(this, BluetoothSDKService::class.java).apply {
-//            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-//            action = "START_ACTION"
-//        }
-//        startService(notifyIntent)
-
 
     val stateMainText = remember {
         MutableTransitionState(false).apply {

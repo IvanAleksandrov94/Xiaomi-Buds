@@ -78,12 +78,39 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
     private val capabilityClient by lazy { Wearable.getCapabilityClient(this) }
     private val nodeClient by lazy { Wearable.getNodeClient(this) }
 
+    private var mmInStream: InputStream? = null
+    private var mmOutStream: OutputStream? = null
+
+
     private val btUuid = "0000fd2d-0000-1000-8000-00805f9b34fb"
 
 
     @SuppressLint("MissingPermission")
     override fun onCreate() {
         super.onCreate()
+        val isDenied = serviceRequestPermission()
+        if (isDenied) {
+            return
+        }
+
+        btManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        btAdapter = btManager.adapter
+        btDevice = btAdapter.bondedDevices?.firstOrNull { it.name == "Xiaomi Buds 3T Pro" }
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        context = this
+        dataClient.addListener(this)
+        messageClient.addListener(this)
+        capabilityClient.addListener(
+            this,
+            Uri.parse("wear://"),
+            CapabilityClient.FILTER_REACHABLE
+        )
+
+        Log.e("BT_SERVICE", "IS CREATE")
+    }
+
+    @SuppressLint("MissingPermission")
+    fun onRestart() {
         val isDenied = serviceRequestPermission()
         if (isDenied) {
             return
@@ -188,57 +215,72 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         return START_STICKY
     }
 
+
     @SuppressLint("MissingPermission")
-    fun connectDevice(device: BluetoothDevice?) {
+    fun connectDevice(device: BluetoothDevice?, data: ByteArray?) {
         val isDenied = serviceRequestPermission()
         if (isDenied) {
             return
         }
-        scopeService.launch(Dispatchers.IO) {
-            if (device == null) {
-                pushBroadcastMessage(
-                    BluetoothUtils.ACTION_DEVICE_NOT_FOUND,
-                    null,
-                    "ACTION_DEVICE_NOT_FOUND"
-                )
-                return@launch
-            }
-
-            var i = 0
-            do {
+        if (device == null) {
+            pushBroadcastMessage(
+                BluetoothUtils.ACTION_DEVICE_NOT_FOUND,
+                null,
+                "ACTION_DEVICE_NOT_FOUND"
+            )
+            return
+        }
+        scopeService.launch(Dispatchers.Main) {
+            val isConnected = processConnect(device)
+            if (isConnected) {
                 try {
-
-                    btSocket = device.createRfcommSocketToServiceRecord(UUID.fromString(btUuid))
-                    val isConnected = btSocket?.isConnected ?: false
-                    if (isConnected) {
-                        btSocket?.close()
+                    listenData()
+                    sendData(byteArrayOfInts(BluetoothCommands.headsetInfo))
+                    if (data != null) {
+                        sendData(data)
                     }
-                    IOBluetoothService(btSocket!!).connect()
-
-                    binder.stopDiscovery()
                     pushBroadcastMessage(
                         BluetoothUtils.ACTION_DEVICE_CONNECTED,
                         device,
                         device.name
                     )
-                    Log.i(TAG, "${device.name} (${device.address}) is connected")
-                    break
-
-                } catch (e: IOException) {
-                    Log.e(TAG, "$${device.name} (${device.address}): BT Connect Error $e")
+                } catch (e: Exception) {
+                    Log.wtf(TAG, "WTF $e")
                 }
-
-                i++
-                delay(100L)
-//                if(i == 2){
-//                    pushBroadcastMessage(
-//                        BluetoothUtils.ACTION_DEVICE_INITIAL,
-//                        null,
-//                        "a"
-//                    )
-//                }
-            } while (i < 2)
+            } else {
+                Log.wtf("WTFTAG", "WTF ENDED")
+            }
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun processConnect(device: BluetoothDevice): Boolean {
+        var i = 0
+        var isSecure = true
+        btAdapter.cancelDiscovery()
+        do {
+            try {
+                if (btSocket != null) {
+                    btSocket?.close()
+                }
+                btSocket = if (isSecure) {
+                    device.createRfcommSocketToServiceRecord(UUID.fromString(btUuid))
+                } else {
+                    device.createInsecureRfcommSocketToServiceRecord(UUID.fromString(btUuid))
+                }
+                btSocket?.connect()
+                mmInStream = btSocket?.inputStream
+                mmOutStream = btSocket?.outputStream
+                return true
+            } catch (e: IOException) {
+                i++
+                if (i == 4) {
+                    isSecure = false
+                }
+                Log.e("CONNECT", "BT Connect Error $e")
+            }
+        } while (i < 8)
+        return false
     }
 
     private fun serviceRequestPermission(): Boolean {
@@ -278,13 +320,82 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         }
     }
 
-    private inner class IOBluetoothService(private val socket: BluetoothSocket) {
-        private val mmInStream: InputStream = socket.inputStream
-        private val mmOutStream: OutputStream = socket.outputStream
+    private fun sendData(data: ByteArray) {
+        scopeService.launch(Dispatchers.IO) {
+            try {
+                mmOutStream?.write(data)
+            } catch (e: IOException) {
+                if (e.message == "Broken pipe") {
+                    Log.e(TAG, "${e.message}, need reconnect")
+                    try {
+                        connectDevice(btDevice, data)
+                        //   mmOutStream?.write(data)
+                    } catch (e: IOException) {
+                        Log.e(TAG, "${e.message}")
+                    }
+                } else {
+                    connectDevice(btDevice, data)
+                    //  mmOutStream?.write(data)
+                    Log.e(TAG, "${e.message}")
+                }
+            }
+        }
+    }
+
+    private fun listenData() {
+        scopeService.launch(Dispatchers.IO) {
+            try {
+                while (true) {
+                    val bytes = mmInStream?.available()
+                    if (bytes != null && bytes != 0) {
+                        val tempBuffer = ByteArray(bytes)
+                        mmInStream?.read(tempBuffer, 0, bytes)
+                        if (tempBuffer.size == 25 && tempBuffer[6] == 0x11.toByte()) {
+
+                            val mutableTempBuffer: MutableList<Byte> = tempBuffer.toMutableList()
+                            val parameters = gyroConvert(mutableTempBuffer)
+                            if (parameters != null) audioManager.setParameters(parameters)
+
+                            val last = mutableTempBuffer[24]
+                            mutableTempBuffer[3] = 0x01.toByte()
+                            mutableTempBuffer.add(6, 0x12.toByte())
+                            mutableTempBuffer[7] = 0x00.toByte()
+                            mutableTempBuffer[25] = last
+                            /// btService.sendServiceMessage(mutableList.toByteArray())
+                        } else {
+                            pushBroadcastMessage(
+                                BluetoothUtils.ACTION_DATA_FROM_HEADPHONES,
+                                btDevice,
+                                "ACTION_DATA_FROM_HEADPHONES",
+                                dataFromHeadset = tempBuffer
+                            )
+                            sendToWatch(tempBuffer)
+                            // LOGS
+                            Log.i(TAG, "!!!!!!!")
+                            val parsed = tempBuffer.joinToString(" ") { "%02x".format(it) }
+                            //  Log.i(TAG, "${tempBuffer.map { it.toByte() }}")
+                            Log.i(TAG, parsed)
+                        }
+                    }
+                }
+            } catch (e: IOException) {
+                Log.e("VM Bluetooth", "IOException: ${e.message}")
+            } catch (e: IndexOutOfBoundsException) {
+                Log.e("VM Bluetooth", "IndexOutOfBoundsException: ${e.message}")
+                ///btService.checkHeadsetMode()
+            } catch (e: Throwable) {
+                Log.e("VM Bluetooth", "${e.message}")
+            }
+        }
+    }
+
+    private inner class IOBluetoothService(private val socket: BluetoothSocket?) {
+        private val mmInStream: InputStream? = socket?.inputStream
+        private val mmOutStream: OutputStream? = socket?.outputStream
 
         @SuppressLint("MissingPermission")
         fun connect() {
-            socket.connect()
+            socket?.connect()
             btSocket = socket
             sendData(byteArrayOfInts(BluetoothCommands.headsetInfo))
             listenData()
@@ -293,21 +404,19 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         fun sendData(data: ByteArray) {
             scopeService.launch(Dispatchers.IO) {
                 try {
-//            val parsed = data.joinToString(" ") { "%02x".format(it) }
-//            Log.i("VM Bluetooth", parsed)
-                    mmOutStream.write(data)
+                    mmOutStream?.write(data)
                 } catch (e: IOException) {
                     if (e.message == "Broken pipe") {
                         Log.e(TAG, "${e.message}, need reconnect")
                         try {
-                            connectDevice(btDevice)
-                            mmOutStream.write(data)
+                            connectDevice(btDevice, data)
+                            //   mmOutStream?.write(data)
                         } catch (e: IOException) {
                             Log.e(TAG, "${e.message}")
                         }
                     } else {
-                        connectDevice(btDevice)
-                        mmOutStream.write(data)
+                        connectDevice(btDevice, data)
+                        // mmOutStream?.write(data)
                         Log.e(TAG, "${e.message}")
                     }
                 }
@@ -319,17 +428,17 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         private fun listenData() = scopeService.launch(Dispatchers.IO) {
             try {
                 while (true) {
-                    val bytes = mmInStream.available()
-                    if (bytes != 0) {
+                    val bytes = mmInStream?.available()
+                    if (bytes != null && bytes != 0) {
                         val tempBuffer = ByteArray(bytes)
-                        mmInStream.read(tempBuffer, 0, bytes)
+                        mmInStream?.read(tempBuffer, 0, bytes)
                         if (tempBuffer.size == 25 && tempBuffer[6] == 0x11.toByte()) {
+
                             val mutableTempBuffer: MutableList<Byte> = tempBuffer.toMutableList()
                             val parameters = gyroConvert(mutableTempBuffer)
                             if (parameters != null) audioManager.setParameters(parameters)
 
                             val last = mutableTempBuffer[24]
-
                             mutableTempBuffer[3] = 0x01.toByte()
                             mutableTempBuffer.add(6, 0x12.toByte())
                             mutableTempBuffer[7] = 0x00.toByte()
@@ -389,7 +498,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         fun activateSearchAllHeadphoneOff() = send(BluetoothCommands.searchAllHeadphoneOff)
 
         fun getHeadsetInfo() = send(BluetoothCommands.headsetInfo)
-        fun getSurroundAudioInfo() = send(BluetoothCommands.surroundAudioInfo.map { it.toInt() })
+
         fun checkHeadsetMode() = send(BluetoothCommands.checkHeadsetMode)
         fun activateHeadTest() {
             send(BluetoothCommands.startHeadTest)
@@ -462,14 +571,15 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
 
         fun startSearchReceiver() = binder.startDiscovery()
 
-        fun connectDevice() = connectDevice(btDevice)
+        private fun connectDevice(data: ByteArray?) = connectDevice(btDevice, data)
 
 
         private fun send(command: List<Int>) {
             try {
-                IOBluetoothService(btSocket!!).sendData(byteArrayOfInts(command))
+                sendData(byteArrayOfInts(command))
             } catch (e: NullPointerException) {
-                connectDevice()
+                connectDevice(byteArrayOfInts(command))
+                // sendData(byteArrayOfInts(command))
                 Log.e(TAG, "btSocket is NULL")
             } catch (e: Exception) {
                 Log.e(TAG, e.message ?: "ERROR")
@@ -532,7 +642,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                 if (device?.name == "Xiaomi Buds 3T Pro") {
                     //  binder.stopDiscovery()
                     btDevice = device
-                    connectDevice(btDevice)
+                    connectDevice(btDevice, null)
                 }
             }
             if (intent.action == "android.bluetooth.device.action.ACL_DISCONNECTED") {
@@ -547,16 +657,27 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
             }
 
             if (intent.action == "android.bluetooth.headset.action.VENDOR_SPECIFIC_HEADSET_EVENT") {
-                val objArr =
-                    intent.extras?.get("android.bluetooth.headset.extra.VENDOR_SPECIFIC_HEADSET_EVENT_ARGS") as Array<*>?
-                if (objArr != null) {
-                    val strArr = arrayOfNulls<String>(objArr.size)
-                    var str = ""
-                    for (i2 in objArr.indices) {
-                        strArr[i2] = objArr[i2] as String
-                        str = StringBuilder(java.lang.String.valueOf(str)).append(strArr[i2]).append(" ").toString()
+                try {
+                    val objArr =
+                        intent.extras?.get("android.bluetooth.headset.extra.VENDOR_SPECIFIC_HEADSET_EVENT_ARGS") as Array<*>?
+                    if (objArr != null) {
+                        val strArr = arrayOfNulls<String>(objArr.size)
+                        var str = ""
+                        for (i in objArr.indices) {
+                            strArr[i] = objArr[i].toString()
+                            str = StringBuilder(java.lang.String.valueOf(str)).append(strArr[i]).append(" ").toString()
+                        }
+                        Log.i("VENDOR_SPECIFIC_HEADSET_EVENT", str)
+                        if (str == "FF01020103020500FF") {
+                            // disabled surround
+
+                        }
+                        if (str == "FF01020103020501FF") {
+                            // enabled surround
+                        }
                     }
-                    Log.e("VENDOR_SPECIFIC_HEADSET_EVENT", str)
+                } catch (e: Exception) {
+                    Log.i("VENDOR_SPECIFIC_HEADSET_EVENT", "Error: $e")
                 }
             }
         }
@@ -651,7 +772,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                             "ACTION_DEVICE_INITIAL"
                         )
                     } else {
-                        connectDevice(btDevice)
+                        connectDevice(btDevice, null)
                         onCheckSurroundStatus()
                     }
                 }

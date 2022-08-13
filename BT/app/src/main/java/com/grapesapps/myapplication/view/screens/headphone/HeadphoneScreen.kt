@@ -75,6 +75,7 @@ fun HeadphoneScreen(
                 connection,
                 Context.BIND_AUTO_CREATE,
             )
+
         }
     }
 
@@ -84,19 +85,33 @@ fun HeadphoneScreen(
             launch {
                 bindBluetoothService()
                 viewModel.load()
-//                viewModel.viewStateHeadphone.
             }
         }
     )
 
-    LaunchedEffect(key1 = lifecycleState) {
-        when (lifecycleState) {
-            Lifecycle.Event.ON_RESUME -> {
-                viewModel.load()
+//    LaunchedEffect(key1 = lifecycleState) {
+//        when (lifecycleState) {
+//            Lifecycle.Event.ON_RESUME -> {
+//                viewModel.load()
+//            }
+//            else -> Unit
+//        }
+//    }
+
+    DisposableEffect(key1 = viewModel) {
+        onDispose {
+            val connection = viewModel.getServiceConnection()
+            try {
+                context.unbindService(connection)
+            } catch (e: Exception) {
+                Log.e("HeadphoneScreen", "$e")
             }
-            else -> Unit
         }
     }
+
+
+    Log.e("CSTATE", "${state.value}")
+
 
     when (val state = state.value) {
         is HeadphoneState.HeadphoneStateLoaded -> {
@@ -138,7 +153,6 @@ fun HeadphoneScreen(
                                     scrollState.firstVisibleItemIndex >= 2
                                 }
                             }
-                            Log.e("STATE", "${state.value}")
                             when (val state = state.value) {
                                 is HeadphoneState.HeadphoneStateLoaded -> {
                                     HeadSetInfo(

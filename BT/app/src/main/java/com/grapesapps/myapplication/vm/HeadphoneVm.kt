@@ -94,8 +94,6 @@ class HeadphoneVm() : ViewModel() {
     }
 
     fun onSelectAutoSearchEar(isEnabled: Boolean) {
-
-
         try {
             if (isEnabled) {
                 mBinder.value?.LocalBinder()?.activateAutoSearchEarOff()
@@ -123,16 +121,13 @@ class HeadphoneVm() : ViewModel() {
     }
 
     fun onSelectSurroundAudio(isEnabled: Boolean) {
-        val random = Random()
-       val b =  random.nextBoolean()
         try {
-            if (b) {
+            if (isEnabled) {
                 mBinder.value?.LocalBinder()?.onActivateSurroundOff()
-                mBinder.value?.LocalBinder()?.getSurroundAudioInfo()
                 return
             }
             mBinder.value?.LocalBinder()?.onActivateSurroundOn()
-            mBinder.value?.LocalBinder()?.getSurroundAudioInfo()
+
         } catch (e: Exception) {
             Log.e(TAG, "onSelectSpectralAudio Error: $e")
         }
@@ -142,19 +137,19 @@ class HeadphoneVm() : ViewModel() {
 
     fun load() {
         mBinder.value?.LocalBinder()?.getHeadsetInfo()
-
-//        viewState.postValue(
-//            HeadphoneState.HeadphoneStateLoaded(
-//                isConnected = false,
-//                leftHeadsetStatus = LHeadsetBatteryStatus("-", false),
-//                rightHeadsetStatus = RHeadsetBatteryStatus("-", false),
-//                caseHeadsetStatus = CHeadsetBatteryStatus("-", false),
-//                headsetStatus = HeadsetSettingStatus(setting = HeadsetMainSetting.Off, 0),
-//                fwInfo = FirmwareInfo("-")
-//            )
-//        )
+        if (state.value is HeadphoneState.HeadphoneStateInitial) {
+            viewState.postValue(
+                HeadphoneState.HeadphoneStateLoaded(
+                    isConnected = false,
+                    leftHeadsetStatus = LHeadsetBatteryStatus("-", false),
+                    rightHeadsetStatus = RHeadsetBatteryStatus("-", false),
+                    caseHeadsetStatus = CHeadsetBatteryStatus("-", false),
+                    headsetStatus = HeadsetSettingStatus(setting = HeadsetMainSetting.Off, 0),
+                    fwInfo = FirmwareInfo("-")
+                )
+            )
+        }
     }
-
     fun disconnect() {
         if (state.value is HeadphoneState.HeadphoneStateLoaded) {
             val currentState = state.value as HeadphoneState.HeadphoneStateLoaded
@@ -181,7 +176,7 @@ class HeadphoneVm() : ViewModel() {
         if (dataFromHeadset == null) {
             return
         }
-        Log.e(TAG, "DATA FROM ${device?.name}: ${dataFromHeadset.map { it }}")
+      //  Log.e(TAG, "DATA FROM ${device?.name}: ${dataFromHeadset.map { it }}")
         try {
             // Status Headset
             // byteArr[6] is 0x04 --> headset mode

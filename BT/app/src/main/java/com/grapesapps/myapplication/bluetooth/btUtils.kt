@@ -42,30 +42,6 @@ object BluetoothBatteryCommands {
 
 object BluetoothCommands {
 
-//    val surroundAudioInfo = listOf(
-//        0xfe, 0xdc, 0xba, 0x01, 0x50, 0x00, 0x13, 0x00,
-//        0x73, 0x01, 0x6a, 0xf9, 0x53, 0x02, 0xc5, 0x17,
-//        0x1c, 0xd9, 0x5e, 0x28, 0xd9, 0xcf, 0x80, 0x14,
-//        0xcd, 0xec, 0xef
-//    )
-
-    // fe dc ba 01 51 00 03 00 01 01 ef fe dc ba c1 50 00 12 02 01 c7 0f 08 8f b7 0d 8f 39 79 d2 ca 20 2b 71 d3 ae ef
-    // fe dc ba 01 51 00 03 00 01 01 ef fe dc ba c1 50 00 12 02 01 c7 0f 08 8f b7 0d 8f 39 79 d2 ca 20 2b 71 d3 ae ef
-    // fe dc ba 01 51 00 03 00 01 01 ef fe dc ba c1 50 00 12 02 01 c7 0f 08 8f b7 0d 8f 39 79 d2 ca 20 2b 71 d3 ae ef
-    val surroundAudioInfo = listOf(
-        0xFF
-    )
-
-//    val surroundAudioInfo = byteArrayOf(
-//        106, -7, 83, 2, -59, 23, 28, -39, 94, 40, -39, -49, -128, 20, -51, -20
-//    )
-    //  ^
-    // fe dc ba 01 50 00 13 00 73 01 6a f9 53 02 c5 17 1c d9 5e 28 d9 cf 80 14 cd ec ef
-    // fe dc ba 01 50 00 13 00 73 01 6a f9 53 02 c5 17 1c d9 5e 28 d9 cf 80 14 cd ec ef
-    // fe dc ba c1 51 00 03 01 01 00 ef
-    //           50-51 - тут разница
-
-
     val headsetInfo = listOf(
         0xfe, 0xdc, 0xba, 0xc1, 0x02, 0x00, 0x05,
         0x02, 0xff, 0xff, 0xff, 0xff, 0xef

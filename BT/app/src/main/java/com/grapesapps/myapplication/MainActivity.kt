@@ -129,6 +129,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+
+    override fun onRestart() {
+        super.onRestart()
+        headphoneVm.load()
+    }
+
+    override fun onResume() {
+        super.onResume()
+      //  headphoneVm.load()
+    }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         BluetoothSDKListenerHelper.registerBluetoothSDKListener(this, mBluetoothListener)
