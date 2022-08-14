@@ -52,8 +52,9 @@ fun HeadphoneScreen(
     val scrollState = rememberLazyListState()
     val scrollBehavior =
         TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberSplineBasedDecay(), rememberTopAppBarState())
-    var switchHeadTracker by remember { mutableStateOf(false) }
-    var switchChecked by remember { mutableStateOf(false) }
+//    var switchHeadTracker by remember { mutableStateOf(false) }
+//    var switchSurroundAudio by remember { mutableStateOf(false) }
+    var switchUpgradeSurroundAudio by remember { mutableStateOf(false) }
     var searchHear by remember { mutableStateOf(false) }
     var autoAnswer by remember { mutableStateOf(false) }
 
@@ -102,13 +103,11 @@ fun HeadphoneScreen(
         }
     }
 
-
-    Log.e("CSTATE", "${state.value}")
-
-
     when (val state = state.value) {
         is HeadphoneState.HeadphoneStateLoaded -> {
-            switchHeadTracker = state.isEnableHeadTracking
+       //     print(state)
+//            switchHeadTracker = state.isEnableHeadTracking
+//            switchSurroundAudio = state.isEnableSurround
 
         }
 
@@ -246,19 +245,24 @@ fun HeadphoneScreen(
                                             Text("Статичное объемное звучание.", fontSize = 10.sp)
 
                                         }
-                                        Switch(
-                                            modifier = Modifier
-                                                .scale(0.8f)
-                                                .padding(end = 15.dp),
-                                            checked = switchChecked,
-                                            colors = SwitchDefaults.colors(
+                                        when (val state = state.value) {
+                                            is HeadphoneState.HeadphoneStateLoaded -> {
+                                                Switch(
+                                                    modifier = Modifier
+                                                        .scale(0.8f)
+                                                        .padding(end = 15.dp),
+                                                    enabled = state.isAvailableSurround,
+                                                    checked = state.isEnableSurround,
+                                                    colors = SwitchDefaults.colors(
 
-                                            ),
-                                            onCheckedChange = {
-                                                viewModel.onChangeSurroundAudio(isEnabled = it)
+                                                    ),
+                                                    onCheckedChange = {
+                                                        viewModel.onChangeSurroundAudio()
+                                                    }
+                                                )
                                             }
-
-                                        )
+                                            else -> {}
+                                        }
                                     }
                                     Row(
                                         modifier = Modifier
@@ -271,21 +275,26 @@ fun HeadphoneScreen(
                                         ) {
                                             Text("Отслеживание движения головы", fontSize = 14.sp)
                                             Text("Включение отслеживания движения головы.", fontSize = 10.sp)
-
                                         }
-                                        Switch(
-                                            modifier = Modifier
-                                                .scale(0.8f)
-                                                .padding(end = 15.dp),
-                                            checked = switchHeadTracker,
-                                            colors = SwitchDefaults.colors(
+                                        when (val state = state.value) {
+                                            is HeadphoneState.HeadphoneStateLoaded -> {
+                                                Switch(
+                                                    modifier = Modifier
+                                                        .scale(0.8f)
+                                                        .padding(end = 15.dp),
+                                                    enabled = (state.isAvailableSurround && state.isEnableSurround),
+                                                    checked = state.isEnableHeadTracking,
+                                                    colors = SwitchDefaults.colors(
 
-                                            ),
-                                            onCheckedChange = {
-                                                viewModel.onChangeHeadTracker()
+                                                    ),
+                                                    onCheckedChange = {
+                                                        viewModel.onChangeHeadTracker()
 //                                                viewModel.onSelectSurroundAudio(isEnabled = it)
+                                                    }
+                                                )
                                             }
-                                        )
+                                            else -> {}
+                                        }
                                     }
                                     Row(
                                         modifier = Modifier
@@ -300,18 +309,24 @@ fun HeadphoneScreen(
                                             Text("Может работать нестабильно и не со всеми плеерами", fontSize = 10.sp)
                                             Text("Необходимо перезапустить текущий плеер.", fontSize = 10.sp)
                                         }
-                                        Switch(
-                                            modifier = Modifier
-                                                .scale(0.8f)
-                                                .padding(end = 15.dp),
-                                            checked = switchChecked,
-                                            colors = SwitchDefaults.colors(
+                                        when (val state = state.value) {
+                                            is HeadphoneState.HeadphoneStateLoaded -> {
+                                                Switch(
+                                                    modifier = Modifier
+                                                        .scale(0.8f)
+                                                        .padding(end = 15.dp),
+                                                    enabled = (state.isAvailableSurround && state.isEnableSurround),
+                                                    checked = switchUpgradeSurroundAudio,
+                                                    colors = SwitchDefaults.colors(
 
-                                            ),
-                                            onCheckedChange = {
-                                                viewModel.onChangeSurroundAudio(isEnabled = it)
+                                                    ),
+                                                    onCheckedChange = {
+                                                        // viewModel.onChangeSurroundAudio(isEnabled = it)
+                                                    }
+                                                )
                                             }
-                                        )
+                                            else -> {}
+                                        }
                                     }
                                     Divider(
                                         Modifier.padding(top = 15.dp),

@@ -33,14 +33,25 @@ class BluetoothSDKListenerHelper {
                     intent?.getParcelableExtra<BluetoothDevice>(BluetoothUtils.EXTRA_DEVICE)
                 val message = intent?.getStringExtra(BluetoothUtils.EXTRA_MESSAGE)
                 val dataFromHeadset = intent?.getByteArrayExtra(BluetoothUtils.EXTRA_DATA)
+                val dataIsAvailableSurround =
+                    intent?.getBooleanExtra(BluetoothUtils.EXTRA_DATA_IS_AVAILABLE_SURROUND, false)
+                val dataIsEnabledSurround =
+                    intent?.getBooleanExtra(BluetoothUtils.EXTRA_DATA_IS_ENABLED_SURROUND, false)
                 Log.e("BluetoothUtilsINTENT", "${intent?.action}")
                 when (intent?.action) {
                     BluetoothUtils.ACTION_DATA_FROM_HEADPHONES -> {
                         mGlobalListener?.onDataFromHeadPhones(
                             device = device,
-                            isSupportedSurround = false,
                             dataFromHeadset = dataFromHeadset
                         )
+                    }
+                    BluetoothUtils.ACTION_DATA_SPECIFIC_VENDOR -> {
+                        mGlobalListener?.onDataUpdateSpecificVendor(
+                            device = device,
+                            isSupportedSurround = dataIsAvailableSurround,
+                            isEnabledSurround = dataIsEnabledSurround,
+
+                            )
                     }
                     BluetoothUtils.ACTION_DEVICE_FOUND -> {
                         mGlobalListener?.onDeviceDiscovered(device)
@@ -100,6 +111,7 @@ class BluetoothSDKListenerHelper {
 
                 val intentFilter = IntentFilter().also {
                     it.addAction(BluetoothUtils.ACTION_DATA_FROM_HEADPHONES)
+                    it.addAction(BluetoothUtils.ACTION_DATA_SPECIFIC_VENDOR)
                     it.addAction(BluetoothUtils.ACTION_BT_OFF)
                     it.addAction(BluetoothUtils.ACTION_BT_ON)
                     it.addAction(BluetoothUtils.ACTION_DEVICE_FOUND)

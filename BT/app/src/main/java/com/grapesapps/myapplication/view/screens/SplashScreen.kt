@@ -136,7 +136,7 @@ fun SplashScreen(
                                     Uri.fromParts("package", context.packageName, null)
                                 )
                                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                startActivityForResult(context as Activity, intent, 1, Bundle())
+                                startActivityForResult(context, intent, 1, Bundle())
                             }
                         }
                     }
@@ -161,13 +161,15 @@ fun SplashScreen(
         key1 = viewModel,
         block = {
             launch {
-                if (ActivityCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.BLUETOOTH_CONNECT
-                    ) != PackageManager.PERMISSION_GRANTED
-                ) {
-                    isRequestedPermission = true
-                    viewModel.onRequestPermission()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    if (ActivityCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.BLUETOOTH_CONNECT
+                        ) != PackageManager.PERMISSION_GRANTED
+                    ) {
+                        isRequestedPermission = true
+                        viewModel.onRequestPermission()
+                    }
                 }
             }
         }
@@ -203,6 +205,11 @@ fun SplashScreen(
                             )
                         )
                     }
+                }else{
+                    viewModel.onChangePermission(SplashStatePermission.SplashStatePermissionGranted)
+                    if (isRequestedPermission) {
+                        viewModel.load()
+                    }
                 }
             }
             else -> Unit
@@ -214,7 +221,7 @@ fun SplashScreen(
             try {
                 val connection = viewModel.getServiceConnection()
                 context.unbindService(connection)
-            } catch (e:Exception){
+            } catch (e: Exception) {
                 Log.e("SplashScreen", "$e")
             }
         }
@@ -296,7 +303,7 @@ fun SplashScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
 
-                        Spacer(modifier = Modifier.padding(top = 100.dp))
+                        Spacer(modifier = Modifier.padding(top = 200.dp))
                         when (val splashState = state.value) {
                             is SplashState.SplashRequestPermission -> {
                                 AnimatedVisibility(
@@ -306,7 +313,7 @@ fun SplashScreen(
                                 ) {
                                     Box(
                                         Modifier
-                                            .height(150.dp)
+                                            .height(250.dp)
                                             .padding(horizontal = 15.dp)
                                     ) {
                                         Column(
@@ -452,7 +459,7 @@ fun SplashScreen(
                                                     onClick = {
                                                         startActivity(
                                                             context,
-                                                            Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS),
+                                                            Intent(Settings.ACTION_BLUETOOTH_SETTINGS),
                                                             Bundle()
                                                         )
                                                     }

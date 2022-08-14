@@ -68,7 +68,7 @@ class MainActivity : ComponentActivity() {
         }
 
         override fun onDeviceDisconnected() {
-        //    headphoneVm.disconnect()
+            //    headphoneVm.disconnect()
             Log.e("IBluetoothSDKListener", "onDeviceDisconnected")
 
         }
@@ -100,14 +100,15 @@ class MainActivity : ComponentActivity() {
 
         override fun onBluetoothDisabled() {
             splashVm.onBluetoothDisabled()
-         //   headphoneVm.disconnect()
+            //   headphoneVm.disconnect()
             Log.e("IBluetoothSDKListener", "onBluetoothDisabled")
         }
 
         override fun onBluetoothInitial() {
             splashVm.load()
-           // headphoneVm.disconnect()
+            // headphoneVm.disconnect()
         }
+
 
         override fun onBluetoothEnabled() {
             splashVm.onBluetoothEnabled()
@@ -118,13 +119,25 @@ class MainActivity : ComponentActivity() {
         //HEADPHONES SCREEN
         override fun onDataFromHeadPhones(
             device: BluetoothDevice?,
-            isSupportedSurround: Boolean?,
             dataFromHeadset: ByteArray?
         ) {
             headphoneVm.update(
                 device = device,
-                isSupportedSurround = isSupportedSurround,
                 dataFromHeadset = dataFromHeadset,
+
+            )
+        }
+
+        //HEADPHONES SCREEN
+        override fun onDataUpdateSpecificVendor(
+            device: BluetoothDevice?,
+            isSupportedSurround: Boolean?,
+            isEnabledSurround: Boolean?
+        ) {
+            headphoneVm.updateVendorSpecific(
+                device = device,
+                isSupportedSurround = isSupportedSurround,
+                isEnabledSurround = isEnabledSurround,
             )
         }
     }
@@ -137,7 +150,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-      //  headphoneVm.load()
+        //  headphoneVm.load()
     }
 
 

@@ -110,29 +110,6 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         Log.e("BT_SERVICE", "IS CREATE")
     }
 
-    @SuppressLint("MissingPermission")
-    fun onRestart() {
-        val isDenied = serviceRequestPermission()
-        if (isDenied) {
-            return
-        }
-
-        btManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        btAdapter = btManager.adapter
-        btDevice = btAdapter.bondedDevices?.firstOrNull { it.name == "Xiaomi Buds 3T Pro" }
-        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        context = this
-        dataClient.addListener(this)
-        messageClient.addListener(this)
-        capabilityClient.addListener(
-            this,
-            Uri.parse("wear://"),
-            CapabilityClient.FILTER_REACHABLE
-        )
-
-        Log.e("BT_SERVICE", "IS CREATE")
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         try {
@@ -193,6 +170,8 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                     .setContentTitle(NOTIFICATION_TITLE_CONNECTED)
                     .setSmallIcon(R.drawable.ic_launcher_foreground)
                     .setSilent(true)
+                    .setDefaults(Notification.DEFAULT_LIGHTS or Notification.DEFAULT_SOUND)
+                    .setVibrate(LongArray(0))
                     .setContentIntent(notificationPendingIntent)
 //                    .addAction(
 //                        R.drawable.ic_launcher_foreground,
@@ -207,6 +186,8 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                 val notification: Notification = Notification.Builder(this)
                     .setContentTitle(NOTIFICATION_TITLE_CONNECTED)
                     .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setDefaults(Notification.DEFAULT_LIGHTS)
+                    .setVibrate(LongArray(0))
                     .setChannelId(CHANNEL_ID)
                     .build()
                 startForeground(1, notification)
@@ -300,11 +281,14 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         data: ByteArray?,
         device: BluetoothDevice
     ) {
-        listenData()
         sendData(byteArrayOfInts(BluetoothCommands.headsetInfo))
+        // sendData(byteArrayOfInts(BluetoothCommands.checkHeadsetMode))
         if (data != null) {
             sendData(data)
         }
+        listenData()
+
+
         pushBroadcastMessage(
             BluetoothUtils.ACTION_DEVICE_CONNECTED,
             device,
@@ -314,20 +298,23 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
 
 
     private fun serviceRequestPermission(): Boolean {
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.BLUETOOTH_CONNECT
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            pushBroadcastMessage(
-                BluetoothUtils.ACTION_REQUEST_PERMISSION,
-                null,
-                "ACTION_REQUEST_PERMISSION"
-            )
-
-            return true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ActivityCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.BLUETOOTH_CONNECT
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                pushBroadcastMessage(
+                    BluetoothUtils.ACTION_REQUEST_PERMISSION,
+                    null,
+                    "ACTION_REQUEST_PERMISSION"
+                )
+                return true
+            }
+            return false
+        } else {
+            return false
         }
-        return false
     }
 
     private fun initConnectionDevice() {
@@ -346,6 +333,12 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                     "ACTION_BT_OFF"
                 )
                 startSystemBluetoothStateReceiver()
+            }
+            val isConnected = btSocket?.isConnected ?: false
+
+
+            if (isConnected && btDevice != null) {
+                connectDevice(btDevice, null)
             }
         }
     }
@@ -447,23 +440,13 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         fun getHeadsetInfo() = send(BluetoothCommands.headsetInfo)
 
         fun checkHeadsetMode() = send(BluetoothCommands.checkHeadsetMode)
+
         fun activateHeadTest() {
             send(BluetoothCommands.startHeadTest)
             // проверка прилегания наушников
             //fe dc ba c7 f4 00 06 0a 04 00 06 01 01 ef
             //fe dc ba c7 f4 00 06 0a 04 00 06 02 02 ef
         }
-
-        @SuppressLint("MissingPermission")
-        fun onCheckSurroundStatus() {
-            val result = btHeadset?.sendVendorSpecificResultCode(
-                btDevice,
-                "+XIAOMI",
-                "FF010201020101FF"
-            )
-        }
-
-        //  +XIAOMI: FF010201020102FF
 
         @SuppressLint("MissingPermission")
         fun onActivateSurroundOn() {
@@ -512,7 +495,15 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         }
 
         fun onChangeHeadTrack(isEnable: Boolean) {
-            isEnabledHeadTracker = isEnable
+            if (!isEnable) {
+                try {
+                    isEnabledHeadTracker = false
+                    audioManager.setParameters("pitch=0.0;row=0.0;yaw=0.0")
+                    return
+                } catch (e: Exception) {
+                }
+            }
+            isEnabledHeadTracker = true
         }
 
         fun isNotConnectedSocket(): Boolean {
@@ -521,6 +512,22 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         }
 
         fun startSearchReceiver() = binder.startDiscovery()
+
+        @SuppressLint("MissingPermission")
+        fun onCheckSurroundStatus() {
+            val isAvailable = btHeadset?.sendVendorSpecificResultCode(
+                btDevice,
+                "+XIAOMI",
+                "FF010201020101FF"
+            )
+            pushBroadcastMessage(
+                BluetoothUtils.ACTION_DATA_SPECIFIC_VENDOR,
+                null,
+                "ACTION_DATA_SPECIFIC_VENDOR",
+                dataIsAvailableSurround = isAvailable,
+            )
+            Log.e("onCheckSurroundStatus", "$isAvailable")
+        }
 
         private fun connectDevice(data: ByteArray?) = connectDevice(btDevice, data)
 
@@ -591,15 +598,16 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                 Log.d(TAG, "${device?.name}")
                 Log.d(TAG, "${device?.address}")
                 if (device?.name == "Xiaomi Buds 3T Pro") {
-                    //  binder.stopDiscovery()
                     btDevice = device
                     connectDevice(btDevice, null)
+
                 }
             }
             if (intent.action == "android.bluetooth.device.action.ACL_DISCONNECTED") {
                 if (btSocket?.isConnected == true) {
                     btSocket?.close()
                 }
+                binder.stopDiscovery()
                 pushBroadcastMessage(
                     BluetoothUtils.ACTION_DEVICE_INITIAL,
                     null,
@@ -619,12 +627,26 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                             str = StringBuilder(java.lang.String.valueOf(str)).append(strArr[i]).append(" ").toString()
                         }
                         Log.i("VENDOR_SPECIFIC_HEADSET_EVENT", str)
-                        if (str == "FF01020103020500FF") {
-                            // disabled surround
+                        if (str.trim() == "FF01020103020500FF") {
+                            //  disabled surround
+                            pushBroadcastMessage(
+                                BluetoothUtils.ACTION_DATA_SPECIFIC_VENDOR,
+                                null,
+                                "ACTION_DATA_SPECIFIC_VENDOR",
+                                dataIsEnabledSurround = false,
+                                dataIsAvailableSurround = true,
+                            )
 
                         }
-                        if (str == "FF01020103020501FF") {
+                        if (str.trim() == "FF01020103020501FF") {
                             // enabled surround
+                            pushBroadcastMessage(
+                                BluetoothUtils.ACTION_DATA_SPECIFIC_VENDOR,
+                                null,
+                                "ACTION_DATA_SPECIFIC_VENDOR",
+                                dataIsEnabledSurround = true,
+                                dataIsAvailableSurround = true,
+                            )
                         }
                     }
                 } catch (e: Exception) {
@@ -683,6 +705,8 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         device: BluetoothDevice?,
         message: String?,
         dataFromHeadset: ByteArray? = null,
+        dataIsAvailableSurround: Boolean? = null,
+        dataIsEnabledSurround: Boolean? = null,
     ) {
         val intent = Intent(action)
         if (device != null) {
@@ -693,6 +717,12 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         }
         if (dataFromHeadset != null) {
             intent.putExtra(BluetoothUtils.EXTRA_DATA, dataFromHeadset)
+        }
+        if (dataIsAvailableSurround != null) {
+            intent.putExtra(BluetoothUtils.EXTRA_DATA_IS_AVAILABLE_SURROUND, dataIsAvailableSurround)
+        }
+        if (dataIsEnabledSurround != null) {
+            intent.putExtra(BluetoothUtils.EXTRA_DATA_IS_ENABLED_SURROUND, dataIsEnabledSurround)
         }
 
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
@@ -724,7 +754,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
                         )
                     } else {
                         connectDevice(btDevice, null)
-                        onCheckSurroundStatus()
+                        // onCheckSurroundStatus()
                     }
                 }
             }
@@ -744,14 +774,18 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
 
     @SuppressLint("MissingPermission")
     fun onCheckSurroundStatus() {
-        val result = btHeadset?.sendVendorSpecificResultCode(
+        val isAvailable = btHeadset?.sendVendorSpecificResultCode(
             btDevice,
             "+XIAOMI",
             "FF010201020101FF"
         )
-
-        Log.e("onCheckSurroundStatus", "$result")
-
+        pushBroadcastMessage(
+            BluetoothUtils.ACTION_DATA_SPECIFIC_VENDOR,
+            null,
+            "ACTION_DATA_SPECIFIC_VENDOR",
+            dataIsAvailableSurround = isAvailable,
+        )
+        Log.e("onCheckSurroundStatus", "$isAvailable")
     }
 
     private fun gyroConvertPosition(position: String?): Float {
@@ -777,11 +811,11 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
     }
 
 
-    ///
-    ///
-    ///   WEAR OS IMPLEMENT
-    ///
-    ///
+///
+///
+///   WEAR OS IMPLEMENT
+///
+///
 
     private fun sendToWatch(data: ByteArray) {
         scopeService.launch(Dispatchers.IO) {

@@ -6,8 +6,13 @@ interface IBluetoothSDKListener {
 
     fun onDataFromHeadPhones(
         device: BluetoothDevice?,
+        dataFromHeadset: ByteArray?,
+    )
+
+    fun onDataUpdateSpecificVendor(
+        device: BluetoothDevice?,
         isSupportedSurround: Boolean?,
-        dataFromHeadset: ByteArray?
+        isEnabledSurround:Boolean?,
     )
 
     /**

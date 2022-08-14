@@ -12,6 +12,7 @@ import androidx.lifecycle.ViewModel
 import com.grapesapps.myapplication.bluetooth.BluetoothBatteryCommands
 import com.grapesapps.myapplication.bluetooth.BluetoothSDKService
 import com.grapesapps.myapplication.entity.*
+import kotlinx.coroutines.delay
 import java.io.IOException
 import java.util.*
 
@@ -109,16 +110,21 @@ class HeadphoneVm() : ViewModel() {
         }
     }
 
-    fun onChangeSurroundAudio(isEnabled: Boolean) {
-        try {
-            if (isEnabled) {
-                mBinder.value?.LocalBinder()?.onActivateSurroundOff()
-                return
-            }
-            mBinder.value?.LocalBinder()?.onActivateSurroundOn()
+    fun onChangeSurroundAudio() {
+        if (state.value is HeadphoneState.HeadphoneStateLoaded) {
+            val currentState = state.value as HeadphoneState.HeadphoneStateLoaded
+            try {
+                if (currentState.isEnableSurround) {
+                    mBinder.value?.LocalBinder()?.onActivateSurroundOff()
+                    viewState.postValue(currentState.copy(isEnableSurround = false))
+                    return
+                }
+                mBinder.value?.LocalBinder()?.onActivateSurroundOn()
+                viewState.postValue(currentState.copy(isEnableSurround = true))
 
-        } catch (e: Exception) {
-            Log.e(TAG, "onSelectSpectralAudio Error: $e")
+            } catch (e: Exception) {
+                Log.e(TAG, "onSelectSpectralAudio Error: $e")
+            }
         }
     }
 
@@ -133,22 +139,8 @@ class HeadphoneVm() : ViewModel() {
     fun removeBond() = mBinder.value?.LocalBinder()?.removeBond()
 
     fun load() {
-        mBinder.value?.LocalBinder()?.getHeadsetInfo()
-        if (state.value is HeadphoneState.HeadphoneStateInitial) {
-            viewState.postValue(
-                HeadphoneState.HeadphoneStateLoaded(
-                    isConnected = true,
-                    isAvailableSurround = true,
-                    isEnableSurround = true,
-                    isEnableHeadTracking = false,
-                    leftHeadsetStatus = LHeadsetBatteryStatus("-", false),
-                    rightHeadsetStatus = RHeadsetBatteryStatus("-", false),
-                    caseHeadsetStatus = CHeadsetBatteryStatus("-", false),
-                    headsetStatus = HeadsetSettingStatus(setting = HeadsetMainSetting.Off, 0),
-                    fwInfo = FirmwareInfo("-")
-                )
-            )
-        }
+        mBinder.value?.LocalBinder()?.checkHeadsetMode()
+//        mBinder.value?.LocalBinder()?.getHeadsetInfo()
     }
 
 
@@ -159,11 +151,43 @@ class HeadphoneVm() : ViewModel() {
         }
     }
 
+    @SuppressLint("MissingPermission")
+    fun updateVendorSpecific(
+        device: BluetoothDevice?,
+        isSupportedSurround: Boolean?,
+        isEnabledSurround: Boolean?
+    ) {
+        Log.i("UPDATEVENDOR", "isSupportedSurround:$isSupportedSurround,isEnabledSurround:$isEnabledSurround ")
+        if (state.value is HeadphoneState.HeadphoneStateLoaded) {
+            val currentState = state.value as HeadphoneState.HeadphoneStateLoaded
+            viewState.postValue(
+                currentState.copy(
+                    isAvailableSurround = isSupportedSurround!!,
+                    isEnableSurround = isEnabledSurround!!,
+                )
+            )
+        } else {
+            viewState.postValue(
+                HeadphoneState.HeadphoneStateLoaded(
+                    isConnected = true,
+                    isAvailableSurround = isSupportedSurround ?: false,
+                    isEnableSurround = isEnabledSurround ?: false,
+                    isEnableHeadTracking = false,
+                    leftHeadsetStatus = LHeadsetBatteryStatus("-", false),
+                    rightHeadsetStatus = RHeadsetBatteryStatus("-", false),
+                    caseHeadsetStatus = CHeadsetBatteryStatus("-", false),
+                    headsetStatus = HeadsetSettingStatus(setting = HeadsetMainSetting.Off, 0),
+                    fwInfo = FirmwareInfo("-")
+                )
+            )
+        }
+
+    }
+
 
     @SuppressLint("MissingPermission")
     fun update(
         device: BluetoothDevice?,
-        isSupportedSurround: Boolean?,
         dataFromHeadset: ByteArray?
     ) {
         if (dataFromHeadset == null) {
@@ -185,7 +209,6 @@ class HeadphoneVm() : ViewModel() {
                         0x00.toByte() -> {
                             if (dataFromHeadset.size < 24) {
                                 mBinder.value?.LocalBinder()?.checkHeadsetMode()
-                                // btService.checkHeadsetMode()
                                 return
                             }
                             Log.i(
@@ -326,7 +349,7 @@ class HeadphoneVm() : ViewModel() {
                             HeadphoneState.HeadphoneStateLoaded(
                                 true,
                                 isAvailableSurround = true,
-                                isEnableSurround = true,
+                                isEnableSurround = false,
                                 isEnableHeadTracking = false,
                                 mainHeadsetValue = -1,
                                 leftHeadsetStatus = LHeadsetBatteryStatus(
