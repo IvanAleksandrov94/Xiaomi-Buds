@@ -11,6 +11,7 @@ import Cocoa
 import IOBluetooth
 import IOBluetoothUI
 import Foundation
+import AVFoundation
 
 struct ContentView: View {
     
@@ -48,13 +49,13 @@ struct ContentView: View {
     
     var body: some View {
         Button("Отключить"){
-            btHelper.sendMessage0()
+            btHelper.sendOff()
         }
         Button("ШУМОДАВ"){
-            btHelper.sendMessage1()
+            btHelper.sendNoice()
         }
         Button("Прозрачность"){
-            btHelper.sendMessage2()
+            btHelper.sendTransparent()
         }
         Button("Connect") {
             btHelper.deviceInquiryDeviceFound(device: btDevice)
@@ -78,81 +79,175 @@ struct ContentView: View {
 
 
 
-class BluetoothHelper: NSObject {
+class BluetoothHelper: NSObject ,IOBluetoothRFCOMMChannelDelegate{
     
     private var name: String!
     
     private var comDevice: IOBluetoothDevice?
     private var comChannel: IOBluetoothRFCOMMChannel!
+    private var audioEnvironment: AVAudioEnvironmentNode = AVAudioEnvironmentNode()
+    private var engine: AVAudioEngine = AVAudioEngine()
+
     
     
     init(deviceName: String) {
         super.init()
         name = deviceName
         IOBluetoothDeviceInquiry(delegate: self).start()
+        
+        
+        
     }
     
     func deviceInquiryComplete() {
         if let comDevice = comDevice {
             print("Bluetooth Helper: Found Correct Device (\(String(describing: comDevice.name)))")
+            
             var channel: IOBluetoothRFCOMMChannel? = IOBluetoothRFCOMMChannel()
-            
             let uuid = IOBluetoothSDPUUID(uuid16: 0xfd2d)
-            //            let sppServiceUUID = IOBluetoothSDPUUID.uuid32(kBluetoothSDPUUID16ServiceClassSerialPort.rawValue)
             let serialPortServiceRecode = comDevice.getServiceRecord(for: uuid)
-            
             var rfcommChannelIDD: BluetoothRFCOMMChannelID = 0;
             let result =  serialPortServiceRecode?.getRFCOMMChannelID(&rfcommChannelIDD)
+            
             if(result == kIOReturnSuccess){
-                print("!!!!!!СУЩЕСТВУЕТ!!!!!")
                 print("Bluetooth Helper: Found Channel")
             }
+            
             comDevice.requestAuthentication()
             
-            
-            
             let isSuccess = comDevice.openRFCOMMChannelAsync(&channel, withChannelID: rfcommChannelIDD, delegate: self)
+            
             if (isSuccess == kIOReturnSuccess) {
+                setUpAudioEngine()
                 print("Bluetooth Helper: Started to Open Channel")
                 comChannel = channel!
+                
             } else {
-                print("ОШИБКА ПОДКЛЮЧЕНИЯ")
+                print("Bluetooth Helper: Connection Error")
             }
+            
         }
     }
     
-    func sendMessage0() {
-        // print("Bluetooth Helper: Sending Message (\(string))")
+    private func setUpAudioEngine() {
+        let x = Float(Int.random(in: -360..<360))
+        let y = Float(Int.random(in: -360..<360))
+        let z = Float(Int.random(in: -360..<360))
+        let yaw = Float(Int.random(in: -360..<360))
+        let pitch  = Float(Int.random(in: -360..<360))
+        let roll = Float(Int.random(in: -360..<360))
+        
+        print("///////")
+        print(x, y, z)
+        print(yaw, pitch, roll)
+        print("///////")
+        audioEnvironment.listenerPosition = AVAudio3DPoint(x: x, y: y, z: z)
+        audioEnvironment.listenerAngularOrientation = AVAudio3DAngularOrientation(yaw: yaw, pitch: pitch, roll: roll)
+        audioEnvironment.position = AVAudio3DPoint(x: x, y: y, z: z)
+        audioEnvironment.reverbParameters.enable = true
+        audioEnvironment.reverbBlend = 1
+        audioEnvironment.reverbParameters.level = -34
+        audioEnvironment.reverbParameters.loadFactoryReverbPreset(.mediumChamber)
+       
+       
+        var outputDeviceID: AudioDeviceID = 56
+//
+        do {
+            try engine.outputNode.auAudioUnit.setDeviceID(outputDeviceID)
+         }  catch {
+           print(error)
+         }
+        
+        
+        let result:OSStatus = AudioUnitSetProperty(engine.outputNode.audioUnit!, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &outputDeviceID, UInt32(MemoryLayout<AudioObjectPropertyAddress>.size))
+        if result != 0  {
+           print("error setting output device \(result)")
+           return
+        }
+        //var converter = AVAudioMixerNode()
+       // let input = engine.inputNode
+        let audioEngine : AVAudioEngine? =  nil
+        var myAUNode: AVAudioUnit? =  nil
+        let myUnitType = kAudioUnitType_Generator
+        let mySubType : OSType = 1
+        
+        let compDesc = AudioComponentDescription(
+            componentType: myUnitType,
+            componentSubType:  mySubType,
+            componentManufacturer: 0x666f6f20, // 4 hex byte OSType 'foo '
+            componentFlags: 0,
+            componentFlagsMask: 0
+        )
+        
+        AVAudioUnit.instantiate(
+            with: compDesc,
+            options: .init(rawValue: 0)) {
+                (audiounit, error) in
+                    myAUNode = audiounit   // save AVAudioUnit
+                     audioEngine!.attach(audiounit!)
+                
+            self.engine.connect(audiounit!, to: self.engine.mainMixerNode, format: self.engine.outputNode.outputFormat(forBus: 0))
+            
+        }
+//        let unitEffect = AVAudioUnitReverb()
+//        unitEffect.wetDryMix = 50
+//        engine.attach(unitEffect)
+        
+        engine.attach(audioEnvironment)
+        
+        engine.connect(audioEnvironment, to: engine.outputNode, format: engine.outputNode.outputFormat(forBus: 0))
+        engine.prepare()
+
+        do {
+            try engine.start()
+            
+            print("Playing!")
+            audioEnvironment.position = AVAudio3DPoint(x: x, y: y, z: z)
+            audioEnvironment.listenerPosition = AVAudio3DPoint(x: x, y: y, z: z)
+            audioEnvironment.listenerAngularOrientation = AVAudio3DAngularOrientation(yaw: yaw, pitch: pitch, roll: roll)
+        } catch {
+            print("Couldn't start engine due to error:", error.localizedDescription)
+        }
+    }
+    
+    // receive data
+    func rfcommChannelData(_ rfcommChannel: IOBluetoothRFCOMMChannel!, data dataPointer: UnsafeMutableRawPointer!, length dataLength: Int) {
+        let array = Array(UnsafeBufferPointer(start: dataPointer.assumingMemoryBound(to: Int8.self), count: dataLength))
+        //print(array)
+        //audioEnvironment.position = AVAudio3DPoint(x: 0, y: -360, z: 0)
+        //audioEnvironment.volume = 0
+       // audioEnvironment.listenerPosition = AVAudio3DPoint(x: 0, y: -360, z: 0)
+       // audioEnvironment.listenerAngularOrientation = AVAudioMake3DAngularOrientation(0.0, 360, -360)
+        print(audioEnvironment.engine?.isRunning)
+        
+    }
+    
+    func sendOff() {
         var bytes: [UInt8] = [0xfe, 0xdc, 0xba, 0xc1, 0x08, 0x00, 0x04, 0x07, 0x02, 0x04, 0x00, 0xef]
         
-        print(comChannel.isOpen())
-        
-        
         if(comChannel?.writeSync(&bytes, length:12) == kIOReturnSuccess){
             print("Успешно отправлено")
-        }else{
+        } else{
             print("Не удалось отправить")
         }
     }
     
-    func sendMessage1() {
-        // print("Bluetooth Helper: Sending Message (\(string))")
+    func sendNoice() {
         var bytes: [UInt8] = [0xfe, 0xdc, 0xba, 0xc1, 0x08, 0x00, 0x04, 0x05, 0x02, 0x04, 0x01, 0xef]
         
-        print(comChannel.isOpen())
         if(comChannel?.writeSync(&bytes, length:12) == kIOReturnSuccess){
             print("Успешно отправлено")
-        }else{
+        } else{
             print("Не удалось отправить")
         }
     }
     
-    func sendMessage2() {
+    func sendTransparent() {
         var bytes: [UInt8] = [0xfe, 0xdc, 0xba, 0xc1, 0x08, 0x00, 0x04, 0x06, 0x02, 0x04, 0x02, 0xef]
-        print(comChannel.isOpen())
+
         if(comChannel?.writeSync(&bytes,length: 12) == kIOReturnSuccess){
             print("Успешно отправлено")
-        }else{
+        } else{
             print("Не удалось отправить")
         }
     }
@@ -167,19 +262,5 @@ class BluetoothHelper: NSObject {
             print("Bluetooth Helper: Found Other Device (\(String(describing: device.name)): \(String(describing: device.addressString)))")
         }
     }
-    
-    //    func rfcommChannelData(rfcommChannel: IOBluetoothRFCOMMChannel!, data dataPointer: UnsafeMutablePointer<Void>, length dataLength: Int) {
-    //            if let dataString = NSString(data: NSData(bytes: dataPointer, length: dataLength), encoding: NSUTF8StringEncoding) as? String {
-    //                delegate?.bluetoothHelperReceivedString(dataString)
-    //            }
-    //        }
-    
-//    func rfcommChannelData(_ rfcommChannel: IOBluetoothRFCOMMChannel!,
-//                           data dataPointer: UnsafeMutableRawPointer!,
-//                           length dataLength: Int) {
-//        //        print("rfcommChannelData")
-//        let array = Array(UnsafeBufferPointer(start: dataPointer.assumingMemoryBound(to: Int8.self), count: dataLength))
-//        print(array)
-//    }
 }
 
