@@ -87,6 +87,7 @@ class BluetoothHelper: NSObject ,IOBluetoothRFCOMMChannelDelegate{
     private var comChannel: IOBluetoothRFCOMMChannel!
     private var audioEnvironment: AVAudioEnvironmentNode = AVAudioEnvironmentNode()
     private var engine: AVAudioEngine = AVAudioEngine()
+    private let player = AVAudioPlayerNode()
 
     
     
@@ -149,7 +150,7 @@ class BluetoothHelper: NSObject ,IOBluetoothRFCOMMChannelDelegate{
         audioEnvironment.reverbParameters.level = -34
         audioEnvironment.reverbParameters.loadFactoryReverbPreset(.mediumChamber)
        
-       
+//
         var outputDeviceID: AudioDeviceID = 56
 //
         do {
@@ -157,50 +158,26 @@ class BluetoothHelper: NSObject ,IOBluetoothRFCOMMChannelDelegate{
          }  catch {
            print(error)
          }
-        
-        
+
+
         let result:OSStatus = AudioUnitSetProperty(engine.outputNode.audioUnit!, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &outputDeviceID, UInt32(MemoryLayout<AudioObjectPropertyAddress>.size))
         if result != 0  {
            print("error setting output device \(result)")
            return
         }
-        //var converter = AVAudioMixerNode()
-       // let input = engine.inputNode
-        let audioEngine : AVAudioEngine? =  nil
-        var myAUNode: AVAudioUnit? =  nil
-        let myUnitType = kAudioUnitType_Generator
-        let mySubType : OSType = 1
         
-        let compDesc = AudioComponentDescription(
-            componentType: myUnitType,
-            componentSubType:  mySubType,
-            componentManufacturer: 0x666f6f20, // 4 hex byte OSType 'foo '
-            componentFlags: 0,
-            componentFlagsMask: 0
-        )
-        
-        AVAudioUnit.instantiate(
-            with: compDesc,
-            options: .init(rawValue: 0)) {
-                (audiounit, error) in
-                    myAUNode = audiounit   // save AVAudioUnit
-                     audioEngine!.attach(audiounit!)
-                
-            self.engine.connect(audiounit!, to: self.engine.mainMixerNode, format: self.engine.outputNode.outputFormat(forBus: 0))
-            
-        }
-//        let unitEffect = AVAudioUnitReverb()
-//        unitEffect.wetDryMix = 50
-//        engine.attach(unitEffect)
-        
+     
+
         engine.attach(audioEnvironment)
-        
+        engine.attach(player)
+        engine.connect(player, to: engine.mainMixerNode, format: nil)
+
         engine.connect(audioEnvironment, to: engine.outputNode, format: engine.outputNode.outputFormat(forBus: 0))
         engine.prepare()
 
         do {
             try engine.start()
-            
+
             print("Playing!")
             audioEnvironment.position = AVAudio3DPoint(x: x, y: y, z: z)
             audioEnvironment.listenerPosition = AVAudio3DPoint(x: x, y: y, z: z)
@@ -208,6 +185,24 @@ class BluetoothHelper: NSObject ,IOBluetoothRFCOMMChannelDelegate{
         } catch {
             print("Couldn't start engine due to error:", error.localizedDescription)
         }
+        
+   
+        
+        engine.mainMixerNode.installTap(onBus: 0, bufferSize: 1024, format: nil) { // I've tried with a format and without
+                (buffer: AVAudioPCMBuffer?, time: AVAudioTime!) -> Void in
+                do {
+//                    self.engine.disconnectNodeOutput(self.player)
+//                    self.engine.connect(self.player, to: self.engine.mainMixerNode, format: buffer!.format)
+                   //
+                    self.player.scheduleBuffer(buffer!)
+                    self.player.play()
+                    
+                    
+                    
+                } catch _{
+                    print("Problem Writing Buffer")
+                }
+            }
     }
     
     // receive data
@@ -215,7 +210,7 @@ class BluetoothHelper: NSObject ,IOBluetoothRFCOMMChannelDelegate{
         let array = Array(UnsafeBufferPointer(start: dataPointer.assumingMemoryBound(to: Int8.self), count: dataLength))
         //print(array)
         //audioEnvironment.position = AVAudio3DPoint(x: 0, y: -360, z: 0)
-        //audioEnvironment.volume = 0
+        audioEnvironment.volume = 1
        // audioEnvironment.listenerPosition = AVAudio3DPoint(x: 0, y: -360, z: 0)
        // audioEnvironment.listenerAngularOrientation = AVAudioMake3DAngularOrientation(0.0, 360, -360)
         print(audioEnvironment.engine?.isRunning)

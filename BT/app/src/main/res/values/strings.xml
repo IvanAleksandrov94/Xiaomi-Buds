@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Bt</string>
+    <string name="app_name">Xiaomi Buds</string>
     <string name="start_wearable_activity">Start Wearable Activity</string>
     <string name="take_photo">Take a Photo</string>
     <string name="send_photo">Send Photo</string>

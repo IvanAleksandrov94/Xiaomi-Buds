@@ -38,7 +38,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
     companion object {
         private const val TAG = "BT_SERVICE"
         private const val CHANNEL_ID = "wear_os_service_channel"
-        private const val CHANNEL_NAME = "WearOS service channel"
+        private const val CHANNEL_NAME = "Xiaomi Buds Service (WEAR OS)"
         private const val CHANNEL_STOP_ACTION = "STOP_ACTION"
         private const val CHANNEL_START_ACTION = "START_ACTION"
         private const val CHANNEL_STOP_MESSAGE = "Стоп"
@@ -47,7 +47,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
         private const val QUERY_TRANSPARENT_MODE = "/query-transparent"
         private const val QUERY_OFF_MODE = "/query-off"
         private const val NOTIFICATION_TITLE_CONNECTED =
-            "Наушники подключены"
+            "Xiaomi Buds Service"
         private const val NOTIFICATION_TITLE_DISCONNECTED =
             "Наушники не подключены"
         private const val WATCH_UPDATE_INFO = "/watch_update"
@@ -168,11 +168,12 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val notification = NotificationCompat.Builder(this, CHANNEL_ID)
                     .setContentTitle(NOTIFICATION_TITLE_CONNECTED)
-                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setSmallIcon(R.drawable.notification_icon_new)
                     .setSilent(true)
                     .setDefaults(Notification.DEFAULT_LIGHTS or Notification.DEFAULT_SOUND)
                     .setVibrate(LongArray(0))
                     .setContentIntent(notificationPendingIntent)
+                    .setShowWhen(false)
 //                    .addAction(
 //                        R.drawable.ic_launcher_foreground,
 //                        CHANNEL_STOP_MESSAGE,
@@ -185,7 +186,7 @@ class BluetoothSDKService : Service(), DataClient.OnDataChangedListener,
             } else {
                 val notification: Notification = Notification.Builder(this)
                     .setContentTitle(NOTIFICATION_TITLE_CONNECTED)
-                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setSmallIcon(R.drawable.notification_icon_new)
                     .setDefaults(Notification.DEFAULT_LIGHTS)
                     .setVibrate(LongArray(0))
                     .setChannelId(CHANNEL_ID)
